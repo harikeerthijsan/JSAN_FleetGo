@@ -24,6 +24,7 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Local file storage (dev uploads)
-storage/
-uploads/
+# Local file storage (dev uploads) — anchored to the backend root so they do NOT
+# match the application's src/utils/storage module.
+/storage/
+/uploads/
