@@ -1,0 +1,40 @@
+.fg-auto-banner { position: relative; isolation: isolate; min-height: 160px; margin-bottom: 28px; overflow: hidden; border: 1px solid #ffffff18; border-radius: 22px; background: #12252c; color: #fff; box-shadow: 0 14px 36px #0b202416; }
+.fg-auto-banner__visual { position: absolute; inset: 0 0 0 32%; z-index: -2; overflow: hidden; }
+.fg-auto-banner__visual img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 58%; animation: fg-auto-arrive 1.2s cubic-bezier(.2,.65,.3,1) both; }
+.fg-auto-banner::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg,#10242c 3%,#10242cf5 29%,#10242c9e 54%,#10242c12 100%); }
+.fg-auto-banner__copy { position: relative; padding: 26px 34px 32px; max-width: 70%; }
+.fg-auto-banner__eyebrow { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 600; letter-spacing: .18em; color: #bfe6db; margin-bottom: 14px; }
+.fg-auto-banner__eyebrow > span { width: 6px; height: 6px; background: #a4e7ce; border-radius: 50%; box-shadow: 0 0 12px #a4e7ce70; }
+.fg-auto-banner h2 { color: #fff; font-size: clamp(21px,2.3vw,30px); font-weight: 500; letter-spacing: -.035em; line-height: 1.15; margin: 0; }
+.fg-auto-banner h2 em { color: #b7edd8; font-style: normal; }
+.fg-auto-banner__description { color: #c2d0d5; font-size: 12px; margin: 12px 0 0; line-height: 1.6; }
+.fg-auto-banner__credit { position: absolute; right: 18px; bottom: 12px; color: #fff; font-size: 10px; text-shadow: 0 1px 5px #000; letter-spacing: .06em; }
+.fg-auto-banner__road { position: absolute; bottom: 0; height: 3px; left: 0; width: 100%; background: repeating-linear-gradient(90deg,#b3e9d12b 0 32px,transparent 32px 54px); }
+.fg-auto-banner__car { display: block; position: absolute; left: -80px; bottom: 2px; width: 45px; color: #b5eed7; animation: fg-auto-drive 9s ease-in-out infinite; }
+.fg-auto-banner__car svg { display: block; width: 100%; }
+.fg-auto-banner--dashboard { min-height: 310px; }
+.fg-auto-banner--dashboard .fg-auto-banner__copy { padding: 36px 40px 55px; max-width: 55%; }
+.fg-auto-banner--dashboard h2 { font-size: clamp(36px,4.5vw,58px); }
+.fg-auto-banner--dashboard .fg-auto-banner__description { max-width: 290px; font-size: 13px; }
+.fg-auto-banner--dashboard .fg-auto-banner__visual { left: 24%; }
+.fg-auto-banner__collection { position: absolute; display: flex; align-items: center; gap: 8px; right: 24px; bottom: 32px; }
+.fg-auto-banner__collection img { width: 92px; height: 59px; object-fit: cover; border-radius: 9px; border: 1px solid #ffffff5c; box-shadow: 0 5px 20px #0003; }
+.fg-auto-banner__collection span { writing-mode: vertical-rl; font-size: 8px; letter-spacing: .12em; color: #fff; }
+@keyframes fg-auto-arrive { from { transform: scale(1.07); opacity: .5; } to { transform: scale(1); opacity: 1; } }
+@keyframes fg-auto-drive { from { left: -80px; } to { left: calc(100% + 40px); } }
+@media (max-width: 700px) {
+ .fg-auto-banner { min-height: 150px; margin-bottom: 22px; border-radius: 16px; }
+ .fg-auto-banner__copy { padding: 24px; max-width: 85%; }
+ .fg-auto-banner::before { background: linear-gradient(90deg,#10242cf5,#10242cb8 55%,#10242c38); }
+ .fg-auto-banner--dashboard { min-height: 270px; }
+ .fg-auto-banner--dashboard .fg-auto-banner__copy { padding: 28px 24px 70px; max-width: 85%; }
+ .fg-auto-banner__collection { right: 16px; bottom: 27px; }
+ .fg-auto-banner__collection img { width: 65px; height: 42px; }
+ .fg-auto-banner__collection span { display: none; }
+ .fg-auto-banner__eyebrow { font-size: 9px; letter-spacing: .12em; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .fg-auto-banner__visual img, .fg-auto-banner__car { animation: none; }
+ .fg-auto-banner__car { left: 20px; }
+}
+@media print { .fg-auto-banner { display: none; } }

@@ -1,0 +1,43 @@
+.fg-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-base);
+}
+
+.fg-table thead th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-gray-50);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.fg-table tbody td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-gray-100);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.fg-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.fg-table__row--clickable {
+  cursor: pointer;
+  transition: background-color var(--transition-base);
+}
+
+.fg-table__row--clickable:hover {
+  background: var(--color-primary-50);
+}

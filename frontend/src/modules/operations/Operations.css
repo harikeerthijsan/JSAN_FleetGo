@@ -1,0 +1,138 @@
+﻿.fg-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.fg-ops__tabs {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 3px 0 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.fg-ops__tabs a {
+  white-space: nowrap;
+  padding: 10px 14px;
+  color: #526b60;
+  border-radius: 9px;
+  font-size: 14px;
+}
+.fg-ops__tabs a.active {
+  background: #d9eee2;
+  color: #214d53;
+  font-weight: 600;
+}
+.fg-ops__heading,
+.fg-ops__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.fg-ops__actions {
+  justify-content: flex-start;
+  margin: 18px 0;
+}
+.fg-ops__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.fg-ops__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.fg-ops__metrics strong {
+  font-size: 30px;
+  color: #285a60;
+}
+.fg-ops__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin: 18px 0;
+}
+.fg-ops__error {
+  padding: 14px 18px;
+  color: #993b3b;
+  border: 1px solid #edcccc;
+  background: #fdeaea;
+  border-radius: 9px;
+  line-height: 1.7;
+}
+.fg-ops fieldset {
+  border: 0;
+  min-width: 0;
+}
+.fg-ops__check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  font-size: 14px;
+}
+.fg-ops__check input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #285a60;
+}
+.fg-ops__facts > div {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) 2fr;
+  gap: 15px;
+  padding: 11px 0;
+  border-bottom: 1px solid #edf1eb;
+}
+.fg-ops__facts dt {
+  color: #61776b;
+}
+.fg-ops__facts dd {
+  overflow-wrap: anywhere;
+}
+.fg-ops__timeline {
+  border-left: 2px solid #b4dfcb;
+  padding-left: 22px;
+  margin: 20px 0;
+}
+.fg-ops__timeline li {
+  position: relative;
+  padding: 0 0 24px;
+}
+.fg-ops__timeline li::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: -28px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #58a58c;
+}
+.fg-ops__timeline small {
+  font-size: 12px;
+  color: #61776b;
+}
+.fg-ops p {
+  line-height: 1.8;
+}
+@media (max-width: 1000px) {
+  .fg-ops__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fg-ops__grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .fg-ops__form,
+  .fg-ops__facts > div {
+    grid-template-columns: 1fr;
+  }
+  .fg-ops__facts > div {
+    gap: 4px;
+  }
+}

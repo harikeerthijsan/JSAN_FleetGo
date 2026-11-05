@@ -1,0 +1,14 @@
+.fg-user-form__section {
+  margin: var(--space-4) 0 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-3);
+}
+
+.fg-user-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-3);
+}

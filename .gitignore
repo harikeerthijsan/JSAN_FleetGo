@@ -1,0 +1,28 @@
+# Root ignore — app-level ignores live in backend/.gitignore & frontend/.gitignore
+
+# Dependencies
+**/node_modules/
+
+# Environment files (never commit real secrets)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Build output
+**/dist/
+
+# Logs
+**/*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local scratch / backups / sample assets (not part of the app)
+.tmp/
+ui-backups/
+images/
+backend/storage/
+backend/uploads/

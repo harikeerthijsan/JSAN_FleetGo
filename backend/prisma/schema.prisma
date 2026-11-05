@@ -1,0 +1,2672 @@
+// ============================================================================
+// FleetGo — Prisma Schema
+// ----------------------------------------------------------------------------
+// Phase 2: Authentication, RBAC and Organization data model
+//   Organization, Role, Permission, RolePermission, User, Depot, UserDepot,
+//   RefreshToken (session), PasswordResetToken, AuditLog.
+//
+// Phase 3: Fleet & Master Management
+//   Vehicle, VehicleStatusHistory, VehicleDocument and master-data lookups
+//   (VehicleMake, VehicleModel, VehicleType, VehicleCategory, FuelType,
+//   OwnershipType, DocumentType). Depot is extended with location details.
+//   Organizations/Vendors from Phase 2 are REUSED (not duplicated): a vehicle's
+//   assigned organization and current vendor both reference Organization.
+//
+// Inventory-specific models (VehicleInventory, reservations, movements, …) are
+// still NOT part of this schema — the vehicle status lifecycle here is designed
+// to integrate cleanly with the Inventory phase (Phase 4).
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
+enum OrganizationType {
+  CTS
+  JSAN
+  VEHICLE_VENDOR
+  TRANSPORT_PARTNER
+}
+
+enum EntityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+// ----------------------------------------------------------------------------
+// Organizations
+// ----------------------------------------------------------------------------
+model Organization {
+  id           String           @id @default(uuid())
+  name         String
+  type         OrganizationType
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  status       EntityStatus     @default(ACTIVE)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  users          User[]
+  // Vehicles assigned to this organization, and vehicles currently in this
+  // organization's custody as the vendor (two distinct relations).
+  vehicles       Vehicle[] @relation("VehicleAssignedOrg")
+  vendorVehicles Vehicle[] @relation("VehicleVendorOrg")
+
+  // Phase 11 — vendor-management detail (only populated for vendor/transport
+  // organizations). Additive; the Organization record remains the identity.
+  vendorProfile   VendorProfile?
+  vendorContacts  VendorContact[]
+  vendorLocations VendorLocation[]
+  vendorDocuments VendorDocument[]
+
+  @@unique([name, type])
+  @@index([type])
+  @@map("organizations")
+}
+
+// ----------------------------------------------------------------------------
+// Vendor management (Phase 11) — additive detail over the Organization identity.
+// A vendor is an Organization of type VEHICLE_VENDOR or TRANSPORT_PARTNER; these
+// tables add the richer profile, contacts and locations a vendor workspace needs
+// without duplicating the organization/vendor identity.
+// ----------------------------------------------------------------------------
+model VendorProfile {
+  id                 String       @id @default(uuid())
+  organizationId     String       @unique
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code               String       @unique
+  registrationNumber String?
+  category           String?
+  addressLine        String?
+  city               String?
+  region             String?
+  website            String?
+  onboardedAt        DateTime?
+  notes              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("vendor_profiles")
+}
+
+model VendorContact {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  title          String?
+  email          String?
+  phone          String?
+  isPrimary      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@map("vendor_contacts")
+}
+
+model VendorLocation {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  label          String
+  addressLine    String?
+  city           String?
+  region         String?
+  contactName    String?
+  contactPhone   String?
+  isPrimary      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@map("vendor_locations")
+}
+
+enum VendorDocumentCategory {
+  CONSENT
+  AGREEMENT
+  OTHER
+}
+
+/// Vendor agreements, consent forms and supporting documents. Binary bytes live
+/// in object storage; only metadata is persisted here.
+model VendorDocument {
+  id             String                 @id @default(uuid())
+  organizationId String
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category       VendorDocumentCategory  @default(OTHER)
+  title          String
+  fileName       String
+  storageKey     String
+  contentType    String
+  size           Int
+  uploadedById   String?
+  createdAt      DateTime                @default(now())
+
+  @@index([organizationId])
+  @@map("vendor_documents")
+}
+
+// ----------------------------------------------------------------------------
+// RBAC: Role, Permission, RolePermission
+// ----------------------------------------------------------------------------
+model Role {
+  id          String   @id @default(uuid())
+  // Machine key, e.g. "SUPER_ADMIN" (stable, used in code).
+  name        String   @unique
+  displayName String
+  description String?
+  // System roles are seeded and protected from deletion / key rename.
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  // Machine key, e.g. "users:create".
+  key         String   @unique
+  // Grouping used by the UI, e.g. "users", "inventory".
+  category    String
+  description String
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@index([category])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ----------------------------------------------------------------------------
+// Users
+// ----------------------------------------------------------------------------
+model User {
+  id           String     @id @default(uuid())
+  fullName     String
+  // Stored lowercased by the application layer; unique prevents duplicates.
+  email        String     @unique
+  phone        String?
+  passwordHash String
+  status       UserStatus @default(ACTIVE)
+
+  // Role (RBAC)
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  // Organization membership. For VENDOR users this is their vendor org and
+  // defines their data-isolation boundary.
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // Permitted operating locations / depots (optional).
+  depots UserDepot[]
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]
+
+  // Phase 3 — fleet activity authored by this user.
+  createdVehicles      Vehicle[]              @relation("VehicleCreatedBy")
+  vehicleStatusChanges VehicleStatusHistory[]
+  uploadedDocuments    VehicleDocument[]
+
+  // Phase 12 — per-user settings preferences (1:1, additive).
+  preference UserPreference?
+
+  // Role-specific profile details (1:1, additive) — e.g. a driver's licence,
+  // address and emergency contact.
+  profile UserProfile?
+
+  @@index([roleId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("users")
+}
+
+// ----------------------------------------------------------------------------
+// Depots (minimal — user location scoping only; extended in Inventory phase)
+// ----------------------------------------------------------------------------
+model Depot {
+  id        String       @id @default(uuid())
+  name      String
+  code      String       @unique
+  region    String?
+  // Phase 3 — location details.
+  address   String?
+  city      String?
+  state     String?
+  country   String?
+  status    EntityStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  users    UserDepot[]
+  vehicles Vehicle[]
+
+  @@map("depots")
+}
+
+model UserDepot {
+  userId  String
+  depotId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  depot   Depot  @relation(fields: [depotId], references: [id], onDelete: Cascade)
+
+  @@id([userId, depotId])
+  @@map("user_depots")
+}
+
+// ----------------------------------------------------------------------------
+// Sessions / Refresh tokens
+// Only a HASH of the refresh token is stored; the raw token lives in the
+// client's httpOnly cookie. Rotation revokes the previous token.
+// ----------------------------------------------------------------------------
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ----------------------------------------------------------------------------
+// Password reset tokens (hashed; single-use)
+// ----------------------------------------------------------------------------
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ----------------------------------------------------------------------------
+// Audit log — authentication + administrative events.
+// `actorId` is nullable so failed logins (unknown/bad user) can still be
+// recorded. No passwords or tokens are ever stored here.
+// ----------------------------------------------------------------------------
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// Phase 3 — Fleet & Master Management
+// ============================================================================
+
+// Controlled vehicle lifecycle. Transitions are validated in the service layer
+// (see fleet.status.ts). Statuses beyond REGISTERED/RECEIVED/AVAILABLE are
+// mostly driven by later phases but are modeled now for forward compatibility.
+enum VehicleStatus {
+  REGISTERED
+  RECEIVED
+  AVAILABLE
+  RESERVED
+  ALLOCATED
+  DISPATCHED
+  IN_TRANSIT
+  AT_VENDOR
+  DELIVERED
+  UNDER_MAINTENANCE
+  DAMAGED
+  RETURNED
+  INACTIVE
+}
+
+enum VehicleDocumentKind {
+  DOCUMENT
+  PHOTO
+}
+
+// --- Master data lookups ----------------------------------------------------
+model VehicleMake {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  models    VehicleModel[]
+  vehicles  Vehicle[]
+
+  @@map("vehicle_makes")
+}
+
+model VehicleModel {
+  id        String      @id @default(uuid())
+  name      String
+  variant   String?
+  makeId    String
+  make      VehicleMake @relation(fields: [makeId], references: [id], onDelete: Restrict)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  vehicles  Vehicle[]
+
+  @@unique([makeId, name, variant])
+  @@index([makeId])
+  @@map("vehicle_models")
+}
+
+model VehicleCategory {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  types     VehicleType[]
+  vehicles  Vehicle[]
+
+  @@map("vehicle_categories")
+}
+
+model VehicleType {
+  id         String           @id @default(uuid())
+  name       String           @unique
+  categoryId String?
+  category   VehicleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  isActive   Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  vehicles   Vehicle[]
+
+  @@index([categoryId])
+  @@map("vehicle_types")
+}
+
+model FuelType {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  vehicles  Vehicle[]
+
+  @@map("fuel_types")
+}
+
+model OwnershipType {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  vehicles  Vehicle[]
+
+  @@map("ownership_types")
+}
+
+model DocumentType {
+  id        String            @id @default(uuid())
+  name      String            @unique
+  // Logical grouping, e.g. "registration" | "insurance" | "photo" | "other".
+  category  String            @default("other")
+  isActive  Boolean           @default(true)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  documents VehicleDocument[]
+
+  @@map("document_types")
+}
+
+// Monotonic counter used to generate human-readable vehicle codes safely.
+model Counter {
+  name  String @id
+  value Int    @default(0)
+
+  @@map("counters")
+}
+
+// --- Vehicle ----------------------------------------------------------------
+model Vehicle {
+  id                 String  @id @default(uuid())
+  // Human-readable system-generated unique id, e.g. "FG-VEH-000123".
+  vehicleCode        String  @unique
+  registrationNumber String  @unique
+  // Chassis/VIN — optional, but unique when present.
+  vin                String? @unique
+  engineNumber       String?
+
+  // Master-data references (all optional — do not force unavailable data).
+  makeId          String?
+  make            VehicleMake?     @relation(fields: [makeId], references: [id], onDelete: Restrict)
+  modelId         String?
+  model           VehicleModel?    @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  typeId          String?
+  type            VehicleType?     @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  categoryId      String?
+  category        VehicleCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  fuelTypeId      String?
+  fuelType        FuelType?        @relation(fields: [fuelTypeId], references: [id], onDelete: Restrict)
+  ownershipTypeId String?
+  ownershipType   OwnershipType?   @relation(fields: [ownershipTypeId], references: [id], onDelete: Restrict)
+
+  manufacturingYear Int?
+  color             String?
+
+  // Assignment & custody (reuse Phase 2 Organization / Depot).
+  organizationId String?
+  organization   Organization? @relation("VehicleAssignedOrg", fields: [organizationId], references: [id], onDelete: SetNull)
+  vendorId       String?
+  vendor         Organization? @relation("VehicleVendorOrg", fields: [vendorId], references: [id], onDelete: SetNull)
+  depotId        String?
+  depot          Depot?        @relation(fields: [depotId], references: [id], onDelete: SetNull)
+
+  // Compliance.
+  insuranceProvider      String?
+  insurancePolicyNumber  String?
+  insuranceExpiry        DateTime?
+  registrationCertNumber String?
+  registrationExpiry     DateTime?
+
+  status   VehicleStatus @default(REGISTERED)
+  remarks  String?
+  metadata Json?
+  // Soft deactivation — historical vehicle records are preserved.
+  isActive Boolean       @default(true)
+
+  createdById String?
+  createdBy   User?    @relation("VehicleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documents     VehicleDocument[]
+  statusHistory VehicleStatusHistory[]
+  // Phase 4 — 1:1 inventory record (additive; the only new relation on Vehicle).
+  inventory     VehicleInventory?
+
+  @@index([status])
+  @@index([organizationId])
+  @@index([vendorId])
+  @@index([depotId])
+  @@index([makeId])
+  @@index([typeId])
+  @@map("vehicles")
+}
+
+model VehicleStatusHistory {
+  id          String         @id @default(uuid())
+  vehicleId   String
+  vehicle     Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  fromStatus  VehicleStatus?
+  toStatus    VehicleStatus
+  reason      String?
+  changedById String?
+  changedBy   User?          @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+
+  @@index([vehicleId])
+  @@map("vehicle_status_history")
+}
+
+model VehicleDocument {
+  id             String              @id @default(uuid())
+  vehicleId      String
+  vehicle        Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  kind           VehicleDocumentKind @default(DOCUMENT)
+  documentTypeId String?
+  documentType   DocumentType?       @relation(fields: [documentTypeId], references: [id], onDelete: SetNull)
+  label          String?
+  // File metadata + storage reference only — binary bytes live in object/file
+  // storage, never in PostgreSQL.
+  fileName       String
+  storageKey     String
+  contentType    String
+  size           Int
+  // Sensitive documents are download-gated to privileged roles.
+  isSensitive    Boolean             @default(false)
+  uploadedById   String?
+  uploadedBy     User?               @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime            @default(now())
+
+  @@index([vehicleId])
+  @@map("vehicle_documents")
+}
+
+// ============================================================================
+// Phase 4 — Inventory Management
+// ----------------------------------------------------------------------------
+// Foreign ids (depot/org/vendor/user) are stored as indexed String columns
+// (not Prisma relations) to keep the completed Vehicle/Depot/Organization/User
+// models untouched; names are resolved via explicit queries in the service.
+// The only new relation on an existing model is Vehicle.inventory (1:1).
+// ============================================================================
+
+enum CustodianType {
+  DEPOT
+  VENDOR
+  ORGANIZATION
+  USER
+}
+
+enum MovementType {
+  RECEIPT
+  DEPOT_TRANSFER
+  DEPOT_TO_VENDOR
+  VENDOR_TO_DEPOT
+  DISPATCH
+  DELIVERY
+  MAINTENANCE
+  CUSTODY_CHANGE
+  RETURN
+  ADJUSTMENT
+}
+
+enum ReservationStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  FULFILLED
+}
+
+enum ReconciliationScope {
+  DEPOT
+  VENDOR
+  ORGANIZATION
+}
+
+enum ReconciliationStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum ReconciliationItemResult {
+  PENDING
+  VERIFIED
+  MISSING
+  MISPLACED
+  DAMAGED
+  UNEXPECTED
+}
+
+/// Single source of truth for a vehicle's CURRENT inventory state (1:1 Vehicle).
+model VehicleInventory {
+  id          String  @id @default(uuid())
+  vehicleId   String  @unique
+  vehicle     Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  inInventory Boolean @default(true)
+
+  // Receiving snapshot
+  receiptId         String?   @unique
+  receivedAt        DateTime?
+  receivedFromOrgId String?
+  receivingDepotId  String?
+  initialCondition  String?
+  odometer          Int?
+  accessories       String?
+
+  // Current state
+  currentDepotId       String?
+  currentCustodianType CustodianType?
+  currentCustodianId   String?
+  activeReservationId  String?
+  lastMovementId       String?
+  lastMovementAt       DateTime?
+  remarks              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([currentDepotId])
+  @@index([currentCustodianType, currentCustodianId])
+  @@index([inInventory])
+  @@map("vehicle_inventory")
+}
+
+/// Immutable record of a vehicle's receipt from CTS (or another org).
+model VehicleReceipt {
+  id                String   @id @default(uuid())
+  vehicleId         String   @unique
+  receivedAt        DateTime @default(now())
+  receivedFromOrgId String?
+  receivingDepotId  String?
+  initialCondition  String?
+  odometer          Int?
+  accessories       String?
+  remarks           String?
+  receivedById      String?
+  idempotencyKey    String?  @unique
+  createdAt         DateTime @default(now())
+
+  @@map("vehicle_receipts")
+}
+
+/// Append-only movement ledger. Never updated or deleted.
+model VehicleMovement {
+  id                String         @id @default(uuid())
+  vehicleId         String
+  type              MovementType
+  fromDepotId       String?
+  toDepotId         String?
+  fromCustodianType CustodianType?
+  fromCustodianId   String?
+  toCustodianType   CustodianType?
+  toCustodianId     String?
+  occurredAt        DateTime       @default(now())
+  initiatedById     String?
+  reference         String?
+  reason            String?
+  remarks           String?
+  idempotencyKey    String?        @unique
+  createdAt         DateTime       @default(now())
+
+  @@index([vehicleId])
+  @@index([type])
+  @@map("vehicle_movements")
+}
+
+/// Custody history; the row with toDate = null is the current custodian.
+model VehicleCustody {
+  id            String        @id @default(uuid())
+  vehicleId     String
+  custodianType CustodianType
+  custodianId   String
+  fromDate      DateTime      @default(now())
+  toDate        DateTime?
+  movementId    String?
+  createdById   String?
+  createdAt     DateTime      @default(now())
+
+  @@index([vehicleId])
+  @@map("vehicle_custody")
+}
+
+/// Vehicle reservations. Overlapping active reservations are prevented in the
+/// service within a row-locked transaction.
+model VehicleReservation {
+  id              String            @id @default(uuid())
+  vehicleId       String
+  requestingOrgId String?
+  depotId         String?
+  startDate       DateTime
+  endDate         DateTime
+  purpose         String?
+  reference       String?
+  status          ReservationStatus @default(ACTIVE)
+  cancelReason    String?
+  cancelledAt     DateTime?
+  createdById     String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([vehicleId, startDate, endDate])
+  @@index([vehicleId, status])
+  @@index([status])
+  @@map("vehicle_reservations")
+}
+
+model InventoryReconciliation {
+  id            String               @id @default(uuid())
+  scope         ReconciliationScope
+  scopeId       String
+  status        ReconciliationStatus @default(DRAFT)
+  notes         String?
+  startedById   String?
+  submittedAt   DateTime?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewComment String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  items  ReconciliationItem[]
+  photos InventoryPhoto[]
+
+  @@index([scope, scopeId])
+  @@index([status])
+  @@map("inventory_reconciliations")
+}
+
+model ReconciliationItem {
+  id                    String                   @id @default(uuid())
+  reconciliationId      String
+  reconciliation        InventoryReconciliation  @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  vehicleId             String?
+  vehicleRef            String?
+  expectedStatus        VehicleStatus?
+  expectedDepotId       String?
+  expectedUpdatedAt     DateTime?
+  expectedCustodianType CustodianType?
+  expectedCustodianId   String?
+  observedDepotId       String?
+  result                ReconciliationItemResult @default(PENDING)
+  discrepancy           String?
+  remarks               String?
+
+  @@index([reconciliationId])
+  @@map("reconciliation_items")
+}
+
+/// Auditable correction created only when a reconciliation is APPROVED.
+model InventoryAdjustment {
+  id               String   @id @default(uuid())
+  vehicleId        String
+  reconciliationId String?
+  type             String
+  fromValue        String?
+  toValue          String?
+  reason           String?
+  approvedById     String?
+  createdAt        DateTime @default(now())
+
+  @@index([vehicleId])
+  @@map("inventory_adjustments")
+}
+
+model InventoryPhoto {
+  id                   String                   @id @default(uuid())
+  vehicleId            String?
+  reconciliationId     String?
+  reconciliation       InventoryReconciliation? @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  reconciliationItemId String?
+  movementId           String?
+  context              String
+  fileName             String
+  storageKey           String
+  contentType          String
+  size                 Int
+  uploadedById         String?
+  createdAt            DateTime                 @default(now())
+
+  @@index([reconciliationId])
+  @@map("inventory_photos")
+}
+
+// Request receipts support safe retries of mutations without duplicate ledger entries.
+model InventoryOperation {
+  id          String   @id @default(uuid())
+  actorId     String
+  key         String
+  action      String
+  requestHash String
+  result      Json
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, key])
+  @@map("inventory_operations")
+}
+
+// Integration contract only: future allocation orchestration uses the inventory service.
+model InventoryAllocation {
+  id             String    @id @default(uuid())
+  vehicleId      String
+  organizationId String
+  reference      String    @unique
+  allocatedById  String
+  releasedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([vehicleId, releasedAt])
+  @@map("inventory_allocations")
+}
+
+// ============================================================================
+// Phase 5 — Ticketing & Approvals
+// ----------------------------------------------------------------------------
+// Cross-module references (requester, organization, vehicle, depot, approver,
+// notification recipient) are stored as indexed String columns, consistent
+// with Phase 4, so the completed User/Organization/Vehicle/Depot models stay
+// untouched. Relations exist only within the ticketing domain. Ticket numbers
+// reuse the Phase 3 Counter model (name = "ticket").
+// ============================================================================
+
+enum TicketType {
+  NEW_VEHICLE
+  DELIVERY
+  PICKUP
+  TRANSFER
+  RETURN
+  MAINTENANCE
+  DAMAGE_INCIDENT
+  REPLACEMENT
+  GENERAL
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Operational ticket lifecycle (kept separate from approval state).
+enum TicketStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_APPROVAL
+  INFO_REQUIRED
+  APPROVED
+  REJECTED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+  CLOSED
+}
+
+// Overall approval state (separate from the operational status).
+enum ApprovalStatus {
+  NOT_SUBMITTED
+  PENDING
+  INFO_REQUESTED
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+  INFO_REQUESTED
+}
+
+enum ApprovalStepState {
+  PENDING
+  APPROVED
+  REJECTED
+  INFO_REQUESTED
+  SKIPPED
+}
+
+enum NotificationType {
+  TICKET_SUBMITTED
+  APPROVAL_REQUIRED
+  TICKET_APPROVED
+  TICKET_REJECTED
+  INFO_REQUESTED
+  TICKET_ASSIGNED
+  TICKET_REASSIGNED
+  TICKET_COMMENT
+  TICKET_OVERDUE
+  TICKET_STATUS_CHANGED
+  TICKET_COMPLETED
+}
+
+/// Per-type configuration: default workflow, SLA relevance and whether an
+/// inventory availability check / specific vehicle applies. Keyed 1:1 to the
+/// TicketType enum value.
+model TicketTypeConfig {
+  id                String     @id @default(uuid())
+  type              TicketType @unique
+  label             String
+  description       String?
+  defaultWorkflowId String?
+  requiresInventory Boolean    @default(false)
+  requiresVehicle   Boolean    @default(false)
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@map("ticket_type_configs")
+}
+
+/// Configurable approval workflow. A workflow is selected per ticket by type
+/// (and optionally requesting organization type) at submission time.
+model ApprovalWorkflow {
+  id                String            @id @default(uuid())
+  name              String
+  description       String?
+  ticketType        TicketType?
+  organizationType  OrganizationType?
+  allowSelfApproval Boolean           @default(false)
+  isActive          Boolean           @default(true)
+  isDefault         Boolean           @default(false)
+  createdById       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  steps ApprovalWorkflowStep[]
+
+  @@index([ticketType])
+  @@map("approval_workflows")
+}
+
+/// One ordered step in a workflow. The approver is resolved by role name; an
+/// optional SLA (hours) drives per-step overdue/escalation.
+model ApprovalWorkflowStep {
+  id               String           @id @default(uuid())
+  workflowId       String
+  workflow         ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  order            Int
+  name             String
+  approverRoleName String
+  slaHours         Int?
+  createdAt        DateTime         @default(now())
+
+  @@unique([workflowId, order])
+  @@index([workflowId])
+  @@map("approval_workflow_steps")
+}
+
+model Ticket {
+  id           String         @id @default(uuid())
+  ticketNumber String         @unique
+  type         TicketType
+  subject      String
+  description  String?
+  priority     TicketPriority @default(MEDIUM)
+
+  // Requester & organization (scalar refs to User/Organization).
+  requesterId     String
+  requestingOrgId String?
+
+  // Scheduling.
+  requestDate  DateTime  @default(now())
+  requiredDate DateTime?
+
+  // Locations (scalar refs to Depot) and requested vehicle details.
+  sourceDepotId      String?
+  destinationDepotId String?
+  requestedTypeId    String?
+  requestedQuantity  Int?
+  vehicleId          String?
+
+  // Flexible, type-specific fields (incident details, severity, contact, etc.).
+  details Json?
+
+  // Operational status + separate approval state.
+  status         TicketStatus   @default(DRAFT)
+  approvalStatus ApprovalStatus @default(NOT_SUBMITTED)
+
+  // Workflow progress.
+  workflowId  String?
+  currentStep Int     @default(0)
+
+  // Assignment (current; history in TicketAssignment).
+  assignedToId String?
+  assignedTeam String?
+
+  // SLA tracking.
+  approvalDueAt   DateTime?
+  resolutionDueAt DateTime?
+  firstApprovalAt DateTime?
+  finalApprovalAt DateTime?
+  submittedAt     DateTime?
+  completedAt     DateTime?
+  closedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  allocations VehicleAllocation[]
+  approvals   TicketApproval[]
+  comments    TicketComment[]
+  attachments TicketAttachment[]
+  activities  TicketActivity[]
+  assignments TicketAssignment[]
+
+  @@index([status])
+  @@index([approvalStatus])
+  @@index([type])
+  @@index([requesterId])
+  @@index([requestingOrgId])
+  @@index([assignedToId])
+  @@index([vehicleId])
+  @@map("tickets")
+}
+
+/// One approval step instance for a ticket (created at submission from the
+/// chosen workflow steps). Processed in `order`. Immutability once decided is
+/// enforced in the service.
+model TicketApproval {
+  id                 String            @id @default(uuid())
+  ticketId           String
+  ticket             Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  order              Int
+  stepName           String
+  approverRoleName   String
+  // Optional explicit approver after a reassignment.
+  assignedApproverId String?
+  state              ApprovalStepState @default(PENDING)
+  decision           ApprovalDecision?
+  decidedById        String?
+  comment            String?
+  decidedAt          DateTime?
+  slaDueAt           DateTime?
+  createdAt          DateTime          @default(now())
+
+  @@index([ticketId, order])
+  @@map("ticket_approvals")
+}
+
+model TicketComment {
+  id         String   @id @default(uuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String
+  body       String
+  // Internal comments are hidden from external orgs/vendors.
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_comments")
+}
+
+model TicketAttachment {
+  id           String   @id @default(uuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fileName     String
+  storageKey   String
+  contentType  String
+  size         Int
+  isInternal   Boolean  @default(false)
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
+}
+
+/// Append-only assignment history. Current assignee is denormalized on Ticket.
+model TicketAssignment {
+  id           String   @id @default(uuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  assignedTeam String?
+  assignedById String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_assignments")
+}
+
+/// Append-only activity timeline. isInternal entries are hidden externally.
+model TicketActivity {
+  id         String   @id @default(uuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type       String
+  actorId    String?
+  summary    String
+  metadata   Json?
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_activities")
+}
+
+/// SLA rule per ticket type + priority (hours to first approval / resolution).
+model TicketSLA {
+  id                 String         @id @default(uuid())
+  ticketType         TicketType
+  priority           TicketPriority
+  firstApprovalHours Int?
+  resolutionHours    Int?
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@unique([ticketType, priority])
+  @@map("ticket_slas")
+}
+
+/// In-app notification. Scalar userId ref to the recipient User.
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  ticketId  String?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([ticketId])
+  @@map("notifications")
+}
+
+// ============================================================================
+// Phase 6 — Allocation and dispatch. Vehicle identity and inventory are reused.
+// ============================================================================
+enum AllocationState {
+  CONFIRMED
+  CANCELLED
+}
+
+enum DispatchState {
+  PLANNED
+  READY
+  CONFIRMED
+  CANCELLED
+}
+
+enum TripState {
+  PLANNED
+  READY_FOR_DISPATCH
+  DISPATCHED
+  IN_TRANSIT
+  DELAYED
+  DELIVERY_ATTEMPTED
+  DELIVERED
+  FAILED_DELIVERY
+  CANCELLED
+}
+
+model VehicleAllocation {
+  id                 String                  @id @default(uuid())
+  reference          String                  @unique
+  ticketId           String
+  ticket             Ticket                  @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  sourceDepotId      String
+  destinationDepotId String
+  receivingOrgId     String
+  transporterId      String
+  plannedDispatchAt  DateTime
+  expectedDeliveryAt DateTime
+  state              AllocationState         @default(CONFIRMED)
+  allocatedById      String
+  cancelledAt        DateTime?
+  cancelReason       String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  items              VehicleAllocationItem[]
+  dispatches         Dispatch[]
+
+  @@index([ticketId, state])
+  @@index([sourceDepotId])
+  @@map("vehicle_allocations")
+}
+
+model VehicleAllocationItem {
+  id                    String            @id @default(uuid())
+  allocationId          String
+  allocation            VehicleAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  vehicleId             String
+  inventoryAllocationId String            @unique
+  cancelledAt           DateTime?
+  createdAt             DateTime          @default(now())
+  dispatchVehicles      DispatchVehicle[]
+
+  @@unique([allocationId, vehicleId])
+  @@index([vehicleId])
+  @@map("vehicle_allocation_items")
+}
+
+model Driver {
+  id            String       @id @default(uuid())
+  name          String
+  phone         String
+  licenseNumber String       @unique
+  licenseExpiry DateTime
+  transporterId String
+  userId        String?      @unique
+  status        EntityStatus @default(ACTIVE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  dispatches    Dispatch[]
+
+  @@index([transporterId])
+  @@map("drivers")
+}
+
+model Dispatch {
+  id                 String                @id @default(uuid())
+  reference          String                @unique
+  allocationId       String
+  allocation         VehicleAllocation     @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  driverId           String
+  driver             Driver                @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  transporterId      String
+  sourceDepotId      String
+  destinationDepotId String
+  destinationAddress String
+  plannedDispatchAt  DateTime
+  expectedDeliveryAt DateTime
+  transportVehicle   String?
+  instructions       String?
+  state              DispatchState         @default(PLANNED)
+  confirmedById      String?
+  confirmedAt        DateTime?
+  createdById        String
+  cancelledAt        DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  vehicles           DispatchVehicle[]
+  evidence           DispatchEvidence[]
+  assignments        TransportAssignment[]
+  trip               Trip?
+
+  @@index([allocationId])
+  @@index([sourceDepotId, state])
+  @@map("dispatches")
+}
+
+model DispatchVehicle {
+  id                   String                @id @default(uuid())
+  dispatchId           String
+  dispatch             Dispatch              @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
+  allocationItemId     String
+  allocationItem       VehicleAllocationItem @relation(fields: [allocationItemId], references: [id], onDelete: Restrict)
+  vehicleId            String
+  identityVerified     Boolean               @default(false)
+  registrationVerified Boolean               @default(false)
+  odometer             Int?
+  fuelLevel            Int?
+  accessories          String?
+  keysHandedOver       Boolean               @default(false)
+  documentsHandedOver  Boolean               @default(false)
+  remarks              String?
+  checkedById          String?
+  checkedAt            DateTime?
+  releasedAt           DateTime?
+
+  @@unique([dispatchId, vehicleId])
+  @@index([allocationItemId])
+  @@map("dispatch_vehicles")
+}
+
+model Trip {
+  id              String                 @id @default(uuid())
+  reference       String                 @unique
+  dispatchId      String                 @unique
+  dispatch        Dispatch               @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
+  status          TripState              @default(PLANNED)
+  actualStartAt   DateTime?
+  actualArrivalAt DateTime?
+  delayMinutes    Int                    @default(0)
+  remarks         String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  events          TripEvent[]
+  exceptions      OperationalException[]
+
+  @@index([status])
+  @@map("trips")
+}
+
+model TripEvent {
+  id          String     @id @default(uuid())
+  tripId      String
+  trip        Trip       @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  type        String
+  fromStatus  TripState?
+  toStatus    TripState?
+  description String
+  actorId     String
+  occurredAt  DateTime   @default(now())
+
+  @@index([tripId, occurredAt])
+  @@map("trip_events")
+}
+
+model DispatchEvidence {
+  id           String   @id @default(uuid())
+  dispatchId   String
+  dispatch     Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
+  vehicleId    String?
+  exceptionId  String?
+  category     String
+  remarks      String?
+  fileName     String
+  storageKey   String
+  contentType  String
+  size         Int
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  @@index([dispatchId, vehicleId])
+  @@map("dispatch_evidence")
+}
+
+model TransportAssignment {
+  id            String   @id @default(uuid())
+  dispatchId    String
+  dispatch      Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Restrict)
+  driverId      String
+  transporterId String
+  assignedById  String
+  reason        String
+  createdAt     DateTime @default(now())
+
+  @@index([dispatchId])
+  @@map("transport_assignments")
+}
+
+model OperationalException {
+  id              String    @id @default(uuid())
+  tripId          String
+  trip            Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  type            String
+  description     String
+  severity        String
+  status          String    @default("OPEN")
+  reportedById    String
+  resolvedById    String?
+  resolutionNotes String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([tripId, status])
+  @@map("operational_exceptions")
+}
+
+// Phase 7 — GPS observations are separate from confirmed operational events.
+enum TrackingMode {
+  REAL
+  SIMULATED
+}
+
+model GPSProviderConfiguration {
+  id               String        @id @default(uuid())
+  slug             String        @unique
+  name             String
+  mode             TrackingMode
+  adapter          String
+  isActive         Boolean       @default(true)
+  webhookSecretEnv String?
+  apiUrlEnv        String?
+  apiTokenEnv      String?
+  lastErrorAt      DateTime?
+  lastErrorCode    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  devices          GPSDevice[]
+  locations        GPSLocation[]
+
+  @@map("gps_providers")
+}
+
+model GPSDevice {
+  id         String                   @id @default(uuid())
+  providerId String
+  provider   GPSProviderConfiguration @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  externalId String
+  name       String
+  status     EntityStatus             @default(ACTIVE)
+  mappings   VehicleGPSMapping[]
+  locations  GPSLocation[]
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+
+  @@unique([providerId, externalId])
+  @@map("gps_devices")
+}
+
+model VehicleGPSMapping {
+  id          String       @id @default(uuid())
+  deviceId    String
+  device      GPSDevice    @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  vehicleId   String
+  mode        TrackingMode
+  startedAt   DateTime     @default(now())
+  endedAt     DateTime?
+  createdById String
+
+  @@index([vehicleId, startedAt])
+  @@map("vehicle_gps_mappings")
+}
+
+model TrackingSession {
+  id                String          @id @default(uuid())
+  vehicleId         String
+  tripId            String
+  mode              TrackingMode
+  state             String          @default("ACTIVE")
+  latestLocationId  String?         @unique
+  latestLocation    GPSLocation?    @relation("LatestGPS", fields: [latestLocationId], references: [id], onDelete: SetNull)
+  lastObservedAt    DateTime?
+  lastGPSAt         DateTime?
+  signalLost        Boolean         @default(false)
+  stationarySince   DateTime?
+  plannedRoute      Json?
+  routeApprovedById String?
+  createdAt         DateTime        @default(now())
+  closedAt          DateTime?
+  locations         GPSLocation[]   @relation("SessionLocations")
+  alerts            TrackingAlert[]
+  geofenceEvents    GeofenceEvent[]
+  geofenceStates    GeofenceState[]
+
+  @@unique([tripId, vehicleId, mode])
+  @@index([state, mode])
+  @@map("tracking_sessions")
+}
+
+model GPSLocation {
+  id          String                   @id @default(uuid())
+  sessionId   String
+  session     TrackingSession          @relation("SessionLocations", fields: [sessionId], references: [id], onDelete: Restrict)
+  latestFor   TrackingSession?         @relation("LatestGPS")
+  vehicleId   String
+  tripId      String
+  deviceId    String
+  device      GPSDevice                @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  providerId  String
+  provider    GPSProviderConfiguration @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  mode        TrackingMode
+  eventId     String
+  payloadHash String
+  fingerprint String                   @unique
+  latitude    Float?
+  longitude   Float?
+  speedKph    Float?
+  heading     Float?
+  address     String?
+  eta         DateTime?
+  gpsAt       DateTime
+  receivedAt  DateTime                 @default(now())
+  quality     String
+  isLate      Boolean                  @default(false)
+
+  @@unique([providerId, eventId])
+  @@index([sessionId, gpsAt, id])
+  @@index([vehicleId, gpsAt])
+  @@index([receivedAt])
+  @@map("gps_locations")
+}
+
+model TrackingAlert {
+  id                String          @id @default(uuid())
+  sessionId         String
+  session           TrackingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  type              String
+  conditionKey      String          @default("default")
+  severity          String
+  description       String
+  status            String          @default("OPEN")
+  acknowledgedById  String?
+  acknowledgedAt    DateTime?
+  resolvedById      String?
+  resolvedAt        DateTime?
+  resolutionRemarks String?
+  recoveredAt       DateTime?
+  createdAt         DateTime        @default(now())
+
+  @@index([sessionId, status])
+  @@index([status, createdAt])
+  @@map("tracking_alerts")
+}
+
+model Geofence {
+  id             String          @id @default(uuid())
+  name           String
+  kind           String
+  shape          String
+  centerLat      Float?
+  centerLon      Float?
+  radiusMeters   Float?
+  polygon        Json?
+  depotId        String?
+  organizationId String?
+  tripId         String?
+  alertOnEntry   Boolean         @default(true)
+  alertOnExit    Boolean         @default(true)
+  isActive       Boolean         @default(true)
+  revision       Int             @default(1)
+  createdById    String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  events         GeofenceEvent[]
+  states         GeofenceState[]
+
+  @@index([tripId, isActive])
+  @@index([depotId])
+  @@map("geofences")
+}
+
+model GeofenceEvent {
+  id         String          @id @default(uuid())
+  geofenceId String
+  geofence   Geofence        @relation(fields: [geofenceId], references: [id], onDelete: Restrict)
+  sessionId  String
+  session    TrackingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  type       String
+  gpsAt      DateTime
+  createdAt  DateTime        @default(now())
+
+  @@index([sessionId, gpsAt])
+  @@map("geofence_events")
+}
+
+model GeofenceState {
+  id         String          @id @default(uuid())
+  geofenceId String
+  geofence   Geofence        @relation(fields: [geofenceId], references: [id], onDelete: Restrict)
+  sessionId  String
+  session    TrackingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  inside     Boolean
+  revision   Int
+  gpsAt      DateTime
+
+  @@unique([sessionId, geofenceId])
+  @@map("geofence_states")
+}
+
+model TrackingPolicy {
+  id                   String   @id @default("default")
+  staleSeconds         Int      @default(120)
+  offlineSeconds       Int      @default(300)
+  stationarySeconds    Int      @default(600)
+  movingSpeedKph       Float    @default(3)
+  routeDeviationMeters Int      @default(300)
+  approachMeters       Int      @default(500)
+  retentionDays        Int      @default(90)
+  alertsEnabled        Boolean  @default(true)
+  updatedAt            DateTime @updatedAt
+
+  @@map("tracking_policy")
+}
+
+// ============================================================================
+// Phase 8 — Inspection & Digital Handover
+// ----------------------------------------------------------------------------
+// Condition capture at CTS receipt, pre-dispatch, receiving and return; a
+// dispatch-vs-receiving photo comparison baseline; damage/discrepancy
+// management with an auditable resolution workflow; digital handover with
+// acknowledgements; and a Proof-of-Delivery record.
+//
+// Following the Phase 4/6/7 convention, references to COMPLETED models
+// (vehicle, dispatch, trip, ticket, organization, depot, user) are stored as
+// indexed String columns — NOT Prisma relations — so existing models are left
+// untouched. Relations exist only among the new Phase 8 tables. Submitted
+// inspections are immutable; corrections are new versions (supersedesId) and
+// original photographs are always retained. Serious confirmed damage marks a
+// vehicle unavailable ONLY through the centralized Inventory service; GPS and
+// geofence proximity never confirm delivery or change custody here.
+// ============================================================================
+
+enum InspectionType {
+  INITIAL_RECEIPT
+  PRE_DISPATCH
+  RECEIVING
+  RETURN
+}
+
+enum InspectionStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+// Receiving outcome, incl. partial delivery when a dispatch carries several vehicles.
+enum ReceivingOutcome {
+  FULL
+  WITH_DISCREPANCIES
+  DAMAGED
+  PARTIAL
+  REJECTED
+}
+
+enum ChecklistInputType {
+  BOOLEAN
+  TEXT
+  NUMBER
+  CONDITION
+}
+
+// Standard comparison angles/categories shared across dispatch and receiving photos.
+enum InspectionPhotoCategory {
+  FRONT
+  REAR
+  LEFT
+  RIGHT
+  INTERIOR
+  DASHBOARD
+  ODOMETER
+  TYRES
+  GLASS
+  LIGHTS
+  ACCESSORIES
+  KEYS_DOCUMENTS
+  EXISTING_DAMAGE
+  OTHER
+}
+
+enum InspectionEvidenceKind {
+  PHOTO
+  VIDEO
+  DOCUMENT
+  SIGNATURE
+}
+
+enum DiscrepancyCategory {
+  NEW_SCRATCH
+  DENT
+  BROKEN_GLASS
+  TYRE_DAMAGE
+  MISSING_ACCESSORY
+  MISSING_DOCUMENT
+  INTERIOR_DAMAGE
+  MECHANICAL_ISSUE
+  ODOMETER_DISCREPANCY
+  OTHER
+}
+
+enum DiscrepancySeverity {
+  MINOR
+  MODERATE
+  MAJOR
+  CRITICAL
+}
+
+enum DiscrepancyStatus {
+  REPORTED
+  UNDER_REVIEW
+  CONFIRMED
+  DISPUTED
+  RESOLVED
+  CLOSED
+}
+
+enum HandoverType {
+  DISPATCH
+  RECEIVING
+}
+
+enum HandoverStatus {
+  PENDING
+  CONFIRMED
+}
+
+/// Configurable inspection template with ordered checklist items and mandatory photos.
+model InspectionTemplate {
+  id          String                    @id @default(uuid())
+  type        InspectionType
+  name        String
+  description String?
+  isActive    Boolean                   @default(true)
+  isDefault   Boolean                   @default(false)
+  version     Int                       @default(1)
+  createdById String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  items       InspectionChecklistItem[]
+  inspections VehicleInspection[]
+
+  @@index([type, isActive])
+  @@map("inspection_templates")
+}
+
+model InspectionChecklistItem {
+  id                    String                   @id @default(uuid())
+  templateId            String
+  template              InspectionTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  label                 String
+  category              String
+  inputType             ChecklistInputType       @default(CONDITION)
+  required              Boolean                  @default(true)
+  photoRequired         Boolean                  @default(false)
+  requiredPhotoCategory InspectionPhotoCategory?
+  sortOrder             Int                      @default(0)
+  responses             InspectionResponse[]
+
+  @@index([templateId])
+  @@map("inspection_checklist_items")
+}
+
+/// A single inspection instance for a vehicle at a point in its lifecycle.
+model VehicleInspection {
+  id        String           @id @default(uuid())
+  reference String           @unique
+  type      InspectionType
+  status    InspectionStatus @default(PENDING)
+
+  // References to completed models (stored as indexed strings — no relations).
+  vehicleId          String
+  registrationNumber String?
+  vin                String?
+  dispatchId         String?
+  dispatchVehicleId  String?
+  tripId             String?
+  ticketId           String?
+  organizationId     String?
+  depotId            String?
+  receivedFromOrgId  String?
+
+  templateId String?
+  template   InspectionTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  // Condition snapshot (nullable — never force unavailable data).
+  odometer             Int?
+  fuelLevel            Int?
+  exteriorCondition    String?
+  interiorCondition    String?
+  tyresCondition       String?
+  glassCondition       String?
+  lightsCondition      String?
+  accessories          String?
+  keysDocuments        String?
+  existingDamage       String?
+  missingItems         String?
+  newDamage            String?
+  generalRemarks       String?
+  identityVerified     Boolean @default(false)
+  registrationVerified Boolean @default(false)
+
+  receivingOutcome ReceivingOutcome?
+  rejectionReason  String?
+
+  performedAt   DateTime?
+  performedById String?
+  receivedById  String?
+
+  submittedAt   DateTime?
+  submittedById String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewRemarks String?
+
+  // Immutable versioning — a correction is a new inspection superseding the prior one.
+  version      Int                @default(1)
+  supersedesId String?            @unique
+  supersedes   VehicleInspection? @relation("InspectionVersion", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy VehicleInspection? @relation("InspectionVersion")
+
+  idempotencyKey String?  @unique
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  responses     InspectionResponse[]
+  photos        InspectionPhoto[]
+  evidence      InspectionEvidence[]
+  discrepancies VehicleDiscrepancy[]
+  handovers     DigitalHandover[]
+
+  @@index([vehicleId, type])
+  @@index([dispatchId])
+  @@index([tripId])
+  @@index([status])
+  @@index([organizationId])
+  @@map("vehicle_inspections")
+}
+
+model InspectionResponse {
+  id              String                   @id @default(uuid())
+  inspectionId    String
+  inspection      VehicleInspection        @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  checklistItemId String?
+  checklistItem   InspectionChecklistItem? @relation(fields: [checklistItemId], references: [id], onDelete: SetNull)
+  label           String
+  category        String?
+  value           String?
+  numericValue    Float?
+  remarks         String?
+
+  @@index([inspectionId])
+  @@map("inspection_responses")
+}
+
+/// Categorized condition photograph. Binary bytes live in object storage; only
+/// metadata/keys are stored here. `sourceEvidenceId` records reuse of an existing
+/// dispatch-evidence photo instead of re-uploading.
+model InspectionPhoto {
+  id               String                  @id @default(uuid())
+  inspectionId     String
+  inspection       VehicleInspection       @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  category         InspectionPhotoCategory
+  label            String?
+  fileName         String
+  storageKey       String
+  contentType      String
+  size             Int
+  sourceEvidenceId String?
+  reused           Boolean                 @default(false)
+  uploadedById     String?
+  takenAt          DateTime                @default(now())
+  createdAt        DateTime                @default(now())
+
+  @@index([inspectionId, category])
+  @@map("inspection_photos")
+}
+
+/// Generic supporting evidence (video, document, captured signature) for an
+/// inspection or a discrepancy.
+model InspectionEvidence {
+  id            String                 @id @default(uuid())
+  inspectionId  String?
+  inspection    VehicleInspection?     @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  discrepancyId String?
+  discrepancy   VehicleDiscrepancy?    @relation(fields: [discrepancyId], references: [id], onDelete: Cascade)
+  kind          InspectionEvidenceKind @default(DOCUMENT)
+  label         String?
+  fileName      String
+  storageKey    String
+  contentType   String
+  size          Int
+  uploadedById  String?
+  createdAt     DateTime               @default(now())
+
+  @@index([inspectionId])
+  @@index([discrepancyId])
+  @@map("inspection_evidence")
+}
+
+model VehicleDiscrepancy {
+  id             String              @id @default(uuid())
+  reference      String              @unique
+  vehicleId      String
+  dispatchId     String?
+  tripId         String?
+  ticketId       String?
+  inspectionId   String?
+  inspection     VehicleInspection?  @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  organizationId String?
+  category       DiscrepancyCategory
+  description    String
+  severity       DiscrepancySeverity @default(MINOR)
+  status         DiscrepancyStatus   @default(REPORTED)
+
+  // Evidence references used for the dispatch-vs-receiving comparison.
+  dispatchEvidenceId String?
+  dispatchPhotoId    String?
+  receivingPhotoId   String?
+
+  // Optional AI-assisted suggestion — ALWAYS requires human confirmation.
+  aiSuggested Boolean @default(false)
+  aiConfirmed Boolean @default(false)
+
+  reportedById       String?
+  reportedAt         DateTime  @default(now())
+  assignedReviewerId String?
+  resolvedById       String?
+  resolutionRemarks  String?
+  resolvedAt         DateTime?
+
+  idempotencyKey String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  comments DiscrepancyComment[]
+  evidence InspectionEvidence[]
+
+  @@index([vehicleId])
+  @@index([dispatchId])
+  @@index([status])
+  @@index([organizationId])
+  @@map("vehicle_discrepancies")
+}
+
+model DiscrepancyComment {
+  id            String             @id @default(uuid())
+  discrepancyId String
+  discrepancy   VehicleDiscrepancy @relation(fields: [discrepancyId], references: [id], onDelete: Cascade)
+  authorId      String?
+  body          String
+  fromStatus    DiscrepancyStatus?
+  toStatus      DiscrepancyStatus?
+  createdAt     DateTime           @default(now())
+
+  @@index([discrepancyId, createdAt])
+  @@map("discrepancy_comments")
+}
+
+/// Digital handover at dispatch or receiving. Records the handing-over and
+/// receiving parties, a checklist snapshot and explicit acknowledgements.
+model DigitalHandover {
+  id             String             @id @default(uuid())
+  reference      String             @unique
+  type           HandoverType
+  status         HandoverStatus     @default(PENDING)
+  vehicleId      String
+  dispatchId     String?
+  tripId         String?
+  ticketId       String?
+  organizationId String?
+  inspectionId   String?
+  inspection     VehicleInspection? @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+
+  handoverByUserId String?
+  handoverByName   String?
+  handoverParty    String?
+  receivedByUserId String?
+  receivedByName   String?
+  receivedParty    String?
+
+  checklist     Json?
+  remarks       String?
+  confirmedById String?
+  confirmedAt   DateTime?
+
+  idempotencyKey String?  @unique
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  acknowledgements HandoverAcknowledgement[]
+
+  @@index([vehicleId])
+  @@index([dispatchId])
+  @@index([type, status])
+  @@map("digital_handovers")
+}
+
+model HandoverAcknowledgement {
+  id             String          @id @default(uuid())
+  handoverId     String
+  handover       DigitalHandover @relation(fields: [handoverId], references: [id], onDelete: Cascade)
+  party          String
+  role           String?
+  userId         String?
+  name           String
+  acknowledged   Boolean         @default(true)
+  signatureKey   String?
+  remarks        String?
+  acknowledgedAt DateTime        @default(now())
+
+  @@index([handoverId])
+  @@map("handover_acknowledgements")
+}
+
+// ============================================================================
+// Phase 9 — Dashboard & Reporting
+// ----------------------------------------------------------------------------
+// Reporting reads existing modules as the single source of truth via database
+// aggregation; it introduces NO duplicate business data. These additive models
+// only persist user report configurations, an export/generation history, and a
+// scheduled-report interface (configuration + status only — no email sending or
+// external credentials). Owner/organization ids are indexed String columns.
+// ============================================================================
+
+enum ReportFormat {
+  CSV
+  XLSX
+  PDF
+  JSON
+}
+
+enum ExportStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+/// A saved/reusable report configuration (category, type and filter set).
+model SavedReport {
+  id             String   @id @default(uuid())
+  name           String
+  category       String
+  reportType     String
+  filters        Json?
+  description    String?
+  ownerId        String
+  organizationId String?
+  isShared       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  schedules ScheduledReport[]
+
+  @@index([ownerId])
+  @@index([organizationId])
+  @@map("saved_reports")
+}
+
+/// Export/generation history. Records what was requested, by whom, the row
+/// count and status — never the exported bytes.
+model ReportExport {
+  id             String       @id @default(uuid())
+  category       String
+  reportType     String
+  format         ReportFormat
+  filters        Json?
+  rowCount       Int?
+  status         ExportStatus @default(COMPLETED)
+  error          String?
+  savedReportId  String?
+  scheduledId    String?
+  requestedById  String
+  organizationId String?
+  createdAt      DateTime     @default(now())
+
+  @@index([requestedById])
+  @@index([organizationId])
+  @@index([createdAt])
+  @@map("report_exports")
+}
+
+/// Scheduled-report configuration (INTERFACE ONLY). A background interface may
+/// record generation attempts in ReportExport; no email/external delivery is
+/// performed without configured, real credentials.
+model ScheduledReport {
+  id            String            @id @default(uuid())
+  savedReportId String
+  savedReport   SavedReport       @relation(fields: [savedReportId], references: [id], onDelete: Cascade)
+  frequency     ScheduleFrequency
+  format        ReportFormat      @default(XLSX)
+  recipientIds  String[]
+  isActive      Boolean           @default(true)
+  lastRunAt     DateTime?
+  lastStatus    ExportStatus?
+  lastError     String?
+  nextRunAt     DateTime?
+  createdById   String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([savedReportId])
+  @@index([isActive])
+  @@map("scheduled_reports")
+}
+
+/// Generated Proof of Delivery. `summary` is a JSON snapshot assembled from
+/// validated records at generation time; `storageKey` optionally caches a
+/// rendered artifact. One POD per (dispatch, vehicle).
+model ProofOfDelivery {
+  id                    String    @id @default(uuid())
+  reference             String    @unique
+  dispatchId            String
+  vehicleId             String
+  tripId                String?
+  ticketId              String?
+  organizationId        String?
+  sourceDepotId         String?
+  destinationDepotId    String?
+  dispatchHandoverId    String?
+  receivingHandoverId   String?
+  receivingInspectionId String?
+  dispatchedAt          DateTime?
+  receivedAt            DateTime?
+  summary               Json
+  storageKey            String?
+  generatedById         String?
+  generatedAt           DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+
+  @@unique([dispatchId, vehicleId])
+  @@index([vehicleId])
+  @@index([organizationId])
+  @@map("proofs_of_delivery")
+}
+
+// ============================================================================
+// Phase 10 — Disk / Media Logistics
+// ----------------------------------------------------------------------------
+// A standalone module for physical storage media and its movement between CTS,
+// depots, vendors and transport partners. It deliberately mirrors — but is kept
+// DISTINCT from — the vehicle inventory/dispatch/inspection models: disks are
+// never mixed into vehicle tables and have their own business rules. References
+// to completed models (organization, depot, user, driver, ticket) are indexed
+// String columns, not relations, so existing models are untouched. Chain of
+// custody and movement ledgers are append-only; shipments require explicit
+// receiving confirmation (a tracking event alone never marks delivery).
+// ============================================================================
+
+enum DiskStatus {
+  RECEIVED
+  AVAILABLE
+  RESERVED
+  PACKED
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  AT_VENDOR
+  RETURNED
+  DAMAGED
+  LOST
+  UNDER_INSPECTION
+  INACTIVE
+}
+
+enum DiskMediaType {
+  HDD
+  SSD
+  TAPE
+  OPTICAL
+  FLASH
+  OTHER
+}
+
+enum DiskCustodianType {
+  DEPOT
+  VENDOR
+  ORGANIZATION
+  TRANSPORTER
+  USER
+}
+
+enum DiskMovementType {
+  RECEIPT
+  SHIPMENT_OUT
+  SHIPMENT_IN
+  CUSTODY_CHANGE
+  RETURN
+  ADJUSTMENT
+  RECONCILIATION
+}
+
+enum DiskShipmentType {
+  CTS_TO_DEPOT
+  DEPOT_TO_VENDOR
+  VENDOR_TO_DEPOT
+  DEPOT_TO_CTS
+  VENDOR_TO_VENDOR
+  RETURN
+}
+
+enum DiskShipmentStatus {
+  PLANNED
+  READY
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+  EXCEPTION
+}
+
+enum DiskShipmentItemStatus {
+  PENDING
+  DISPATCHED
+  RECEIVED
+  MISSING
+  DAMAGED
+  EXTRA
+}
+
+enum DiskInspectionType {
+  RECEIPT
+  PRE_DISPATCH
+  RECEIVING
+  RECONCILIATION
+}
+
+enum DiskHandoverType {
+  DISPATCH
+  RECEIVING
+}
+
+enum DiskDiscrepancyCategory {
+  MISSING
+  DAMAGED
+  UNACCOUNTED
+  WRONG_LOCATION
+  WRONG_CUSTODIAN
+  SERIAL_MISMATCH
+  OTHER
+}
+
+enum DiskDiscrepancySeverity {
+  MINOR
+  MODERATE
+  MAJOR
+  CRITICAL
+}
+
+enum DiskDiscrepancyStatus {
+  REPORTED
+  UNDER_REVIEW
+  CONFIRMED
+  DISPUTED
+  RESOLVED
+  CLOSED
+}
+
+enum DiskReconciliationScope {
+  DEPOT
+  VENDOR
+  ORGANIZATION
+}
+
+enum DiskReconciliationStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum DiskReconciliationResult {
+  PENDING
+  VERIFIED
+  MISSING
+  MISPLACED
+  DAMAGED
+  UNACCOUNTED
+}
+
+/// A single physical disk / media device identity.
+model Disk {
+  id           String        @id @default(uuid())
+  diskCode     String        @unique
+  serialNumber String        @unique
+  mediaType    DiskMediaType @default(HDD)
+  capacity     String?
+  make         String?
+  model        String?
+  condition    String?
+  sourceOrgId  String?
+  status       DiskStatus    @default(RECEIVED)
+  remarks      String?
+  metadata     Json?
+  isActive     Boolean       @default(true)
+  createdById  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  inventory     DiskInventory?
+  photos        DiskPhoto[]
+  custody       DiskCustody[]
+  movements     DiskMovement[]
+  shipmentItems DiskShipmentItem[]
+  discrepancies DiskDiscrepancy[]
+
+  @@index([status])
+  @@index([sourceOrgId])
+  @@index([mediaType])
+  @@map("disks")
+}
+
+/// Current-state record for a disk (1:1). Mirrors VehicleInventory.
+model DiskInventory {
+  id                   String             @id @default(uuid())
+  diskId               String             @unique
+  disk                 Disk               @relation(fields: [diskId], references: [id], onDelete: Cascade)
+  inInventory          Boolean            @default(true)
+  receivedAt           DateTime?
+  receivedFromOrgId    String?
+  receivingDepotId     String?
+  currentDepotId       String?
+  currentLocation      String?
+  currentCustodianType DiskCustodianType?
+  currentCustodianId   String?
+  activeShipmentId     String?
+  lastMovementId       String?
+  lastMovementAt       DateTime?
+  remarks              String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([currentDepotId])
+  @@index([currentCustodianType, currentCustodianId])
+  @@index([inInventory])
+  @@map("disk_inventory")
+}
+
+/// Append-only disk movement ledger. Never updated or deleted.
+model DiskMovement {
+  id                String             @id @default(uuid())
+  diskId            String
+  disk              Disk               @relation(fields: [diskId], references: [id], onDelete: Restrict)
+  type              DiskMovementType
+  shipmentId        String?
+  fromDepotId       String?
+  toDepotId         String?
+  fromLocation      String?
+  toLocation        String?
+  fromCustodianType DiskCustodianType?
+  fromCustodianId   String?
+  toCustodianType   DiskCustodianType?
+  toCustodianId     String?
+  occurredAt        DateTime           @default(now())
+  initiatedById     String?
+  reference         String?
+  reason            String?
+  remarks           String?
+  idempotencyKey    String?            @unique
+  createdAt         DateTime           @default(now())
+
+  @@index([diskId])
+  @@index([shipmentId])
+  @@index([type])
+  @@map("disk_movements")
+}
+
+/// Chain-of-custody history; the row with toDate = null is the current custodian.
+model DiskCustody {
+  id             String            @id @default(uuid())
+  diskId         String
+  disk           Disk              @relation(fields: [diskId], references: [id], onDelete: Restrict)
+  custodianType  DiskCustodianType
+  custodianId    String
+  location       String?
+  depotId        String?
+  fromDate       DateTime          @default(now())
+  toDate         DateTime?
+  movementId     String?
+  shipmentId     String?
+  handedOverById String?
+  receivedById   String?
+  acknowledged   Boolean           @default(false)
+  signatureKey   String?
+  createdById    String?
+  createdAt      DateTime          @default(now())
+
+  @@index([diskId])
+  @@index([shipmentId])
+  @@map("disk_custody")
+}
+
+model DiskShipment {
+  id                 String             @id @default(uuid())
+  reference          String             @unique
+  type               DiskShipmentType
+  status             DiskShipmentStatus @default(PLANNED)
+  ticketId           String?
+  sourceOrgId        String?
+  sourceDepotId      String?
+  destinationOrgId   String?
+  destinationDepotId String?
+  transporterId      String?
+  driverId           String?
+  plannedDispatchAt  DateTime?
+  expectedDeliveryAt DateTime?
+  trackingReference  String?
+  dispatchedAt       DateTime?
+  deliveredAt        DateTime?
+  dispatchedById     String?
+  confirmedById      String?
+  cancelledAt        DateTime?
+  remarks            String?
+  exception          String?
+  idempotencyKey     String?            @unique
+  createdById        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  items         DiskShipmentItem[]
+  photos        DiskPhoto[]
+  handovers     DiskHandover[]
+  inspections   DiskInspection[]
+  discrepancies DiskDiscrepancy[]
+
+  @@index([status])
+  @@index([type])
+  @@index([transporterId])
+  @@map("disk_shipments")
+}
+
+model DiskShipmentItem {
+  id                String                 @id @default(uuid())
+  shipmentId        String
+  shipment          DiskShipment           @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  diskId            String
+  disk              Disk                   @relation(fields: [diskId], references: [id], onDelete: Restrict)
+  status            DiskShipmentItemStatus @default(PENDING)
+  dispatchVerified  Boolean                @default(false)
+  dispatchCondition String?
+  receivedVerified  Boolean                @default(false)
+  receivedCondition String?
+  remarks           String?
+
+  @@unique([shipmentId, diskId])
+  @@index([diskId])
+  @@map("disk_shipment_items")
+}
+
+model DiskInspection {
+  id             String             @id @default(uuid())
+  reference      String             @unique
+  type           DiskInspectionType
+  shipmentId     String?
+  shipment       DiskShipment?      @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  diskId         String?
+  condition      String?
+  sealNumber     String?
+  packaging      String?
+  verified       Boolean            @default(false)
+  remarks        String?
+  performedById  String?
+  performedAt    DateTime           @default(now())
+  idempotencyKey String?            @unique
+  createdAt      DateTime           @default(now())
+
+  photos DiskPhoto[]
+
+  @@index([shipmentId])
+  @@index([diskId])
+  @@map("disk_inspections")
+}
+
+/// Disk photo / document. Binary bytes live in object storage; only metadata here.
+model DiskPhoto {
+  id               String              @id @default(uuid())
+  diskId           String?
+  disk             Disk?               @relation(fields: [diskId], references: [id], onDelete: Cascade)
+  shipmentId       String?
+  shipment         DiskShipment?       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  inspectionId     String?
+  inspection       DiskInspection?     @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  reconciliationId String?
+  reconciliation   DiskReconciliation? @relation("DiskReconPhotos", fields: [reconciliationId], references: [id], onDelete: Cascade)
+  context          String
+  fileName         String
+  storageKey       String
+  contentType      String
+  size             Int
+  uploadedById     String?
+  createdAt        DateTime            @default(now())
+
+  @@index([diskId])
+  @@index([shipmentId])
+  @@map("disk_photos")
+}
+
+model DiskHandover {
+  id                   String           @id @default(uuid())
+  reference            String           @unique
+  shipmentId           String
+  shipment             DiskShipment     @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  type                 DiskHandoverType
+  handoverByUserId     String?
+  handoverByName       String?
+  receivedByUserId     String?
+  receivedByName       String?
+  sealNumber           String?
+  packaging            String?
+  checklist            Json?
+  handoverAck          Boolean          @default(false)
+  handoverSignatureKey String?
+  receiverAck          Boolean          @default(false)
+  receiverSignatureKey String?
+  confirmedById        String?
+  confirmedAt          DateTime?
+  remarks              String?
+  idempotencyKey       String?          @unique
+  createdById          String?
+  createdAt            DateTime         @default(now())
+
+  @@index([shipmentId])
+  @@map("disk_handovers")
+}
+
+model DiskReconciliation {
+  id             String                   @id @default(uuid())
+  reference      String                   @unique
+  scope          DiskReconciliationScope
+  scopeId        String
+  status         DiskReconciliationStatus @default(DRAFT)
+  notes          String?
+  startedById    String?
+  submittedAt    DateTime?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewComment  String?
+  idempotencyKey String?                  @unique
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  items  DiskReconciliationItem[]
+  photos DiskPhoto[]              @relation("DiskReconPhotos")
+
+  @@index([scope, scopeId])
+  @@index([status])
+  @@map("disk_reconciliations")
+}
+
+model DiskReconciliationItem {
+  id                    String                   @id @default(uuid())
+  reconciliationId      String
+  reconciliation        DiskReconciliation       @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  diskId                String?
+  diskRef               String?
+  expectedStatus        DiskStatus?
+  expectedDepotId       String?
+  expectedCustodianType DiskCustodianType?
+  expectedCustodianId   String?
+  observedDepotId       String?
+  observedCustodianId   String?
+  result                DiskReconciliationResult @default(PENDING)
+  discrepancy           String?
+  remarks               String?
+
+  @@index([reconciliationId])
+  @@map("disk_reconciliation_items")
+}
+
+model DiskDiscrepancy {
+  id                 String                  @id @default(uuid())
+  reference          String                  @unique
+  diskId             String?
+  disk               Disk?                   @relation(fields: [diskId], references: [id], onDelete: SetNull)
+  shipmentId         String?
+  shipment           DiskShipment?           @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  reconciliationId   String?
+  category           DiskDiscrepancyCategory
+  description        String
+  severity           DiskDiscrepancySeverity @default(MINOR)
+  status             DiskDiscrepancyStatus   @default(REPORTED)
+  organizationId     String?
+  reportedById       String?
+  assignedReviewerId String?
+  resolvedById       String?
+  resolutionRemarks  String?
+  resolvedAt         DateTime?
+  idempotencyKey     String?                 @unique
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@index([diskId])
+  @@index([shipmentId])
+  @@index([status])
+  @@map("disk_discrepancies")
+}
+
+// ----------------------------------------------------------------------------
+// Settings (Phase 12) — a persisted, admin-managed system-settings registry and
+// per-user preferences. Additive; nothing else is modified.
+// ----------------------------------------------------------------------------
+enum SettingValueType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+model SystemSetting {
+  key          String           @id
+  category     String
+  label        String
+  description  String?
+  valueType    SettingValueType @default(STRING)
+  value        String
+  defaultValue String
+  isEditable   Boolean          @default(true)
+  updatedById  String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([category])
+  @@map("system_settings")
+}
+
+model UserPreference {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme          String   @default("system")
+  density        String   @default("comfortable")
+  defaultLanding String?
+  notifyEmail    Boolean  @default(true)
+  notifyInApp    Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+/// Role-specific profile details for a user (1:1, all optional). Populated per
+/// role — e.g. licence fields for drivers, address/emergency contact generally.
+model UserProfile {
+  userId                String    @id
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseNumber         String?
+  licenseExpiry         DateTime?
+  licenseClass          String?
+  addressLine           String?
+  city                  String?
+  state                 String?
+  postalCode            String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  dateOfBirth           DateTime?
+  notes                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("user_profiles")
+}

@@ -1,0 +1,24 @@
+.fg-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.fg-breadcrumbs__link {
+  color: var(--text-secondary);
+}
+.fg-breadcrumbs__link:hover {
+  color: var(--color-primary-600);
+  text-decoration: none;
+}
+
+.fg-breadcrumbs__current {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.fg-breadcrumbs__sep {
+  color: var(--color-gray-400);
+}

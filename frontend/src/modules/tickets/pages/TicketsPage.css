@@ -1,0 +1,15 @@
+.fg-tk-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.fg-tk-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+@media (max-width: 900px) {
+  .fg-tk-charts { grid-template-columns: 1fr; }
+}
+.fg-tk-section { margin-top: var(--space-5); }

@@ -1,0 +1,143 @@
+.fg-disk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 1.25rem);
+}
+
+.fg-disk__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--color-border, #dce3e3);
+  padding-bottom: 0.25rem;
+}
+
+.fg-disk__tabs a {
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px 8px 0 0;
+  color: var(--color-text-muted, #5b6b6b);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.fg-disk__tabs a.active {
+  color: var(--color-accent, #0f766e);
+  background: var(--color-surface-alt, #eef5f4);
+}
+
+.fg-disk__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.fg-disk__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border, #dce3e3);
+  border-radius: 10px;
+  background: var(--color-surface, #fff);
+}
+
+.fg-disk__metric-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text, #10241f);
+}
+
+.fg-disk__metric-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #5b6b6b);
+}
+
+.fg-disk__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.fg-disk__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.fg-disk__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.fg-disk__error {
+  color: var(--color-danger, #b42318);
+  font-weight: 600;
+}
+
+.fg-disk__ok {
+  color: var(--color-success, #067647);
+  font-weight: 600;
+}
+
+.fg-disk__note {
+  color: var(--color-text-muted, #5b6b6b);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.fg-disk__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.fg-disk__kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  font-size: 0.9rem;
+}
+
+.fg-disk__kv dt {
+  color: var(--color-text-muted, #5b6b6b);
+}
+
+.fg-disk__kv dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.fg-disk__pick {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--color-border, #dce3e3);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fg-disk__pick label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.fg-disk__linkbtn {
+  background: none;
+  border: none;
+  color: var(--color-accent, #0f766e);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}

@@ -1,0 +1,27 @@
+.fg-spinner {
+  display: inline-block;
+  border: 2.5px solid var(--color-primary-100);
+  border-top-color: var(--color-primary-500);
+  border-radius: 50%;
+  animation: fg-spin 0.7s linear infinite;
+}
+
+.fg-spinner-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-4);
+}
+
+.fg-spinner-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+@keyframes fg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

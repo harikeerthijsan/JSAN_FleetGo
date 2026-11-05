@@ -1,0 +1,19 @@
+.fg-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+.fg-form-section {
+  margin-top: var(--space-5);
+}
+.fg-form-note {
+  align-self: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+.fg-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}

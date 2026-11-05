@@ -1,0 +1,62 @@
+.fg-tk-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+.fg-tk-form-section { margin-top: var(--space-5); }
+.fg-tk-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.fg-tk-avail {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--color-gray-50);
+}
+.fg-tk-avail__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+.fg-tk-avail__depots {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.fg-tk-avail__chip {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+}
+.fg-tk-avail__none { color: var(--text-secondary); font-size: var(--font-size-sm); }
+
+/* Damage / replacement / maintenance evidence media */
+.fg-tk-media {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+.fg-tk-media__hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3);
+}
+.fg-tk-file {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+.fg-tk-file input { font-weight: var(--font-weight-normal); }
+.fg-tk-file small { color: var(--text-secondary); font-weight: var(--font-weight-normal); }

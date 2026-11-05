@@ -1,0 +1,126 @@
+.fg-track {
+  display: grid;
+  gap: 1.3rem;
+}
+.fg-track__source {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.2rem 1.5rem;
+  border: 1px solid #dce5ed;
+  border-radius: 16px;
+  background: #fff;
+}
+.fg-track__source--simulated {
+  border-color: #d69a38;
+  background: #fff8e9;
+  color: #50370c;
+}
+.fg-track__tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.3rem;
+}
+.fg-track__tabs a {
+  white-space: nowrap;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.fg-track__tabs a.active {
+  background: #102d42;
+  color: #fff;
+}
+.fg-track__heading,
+.fg-track__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.fg-track__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.8rem;
+}
+.fg-track__metrics strong {
+  font-size: 2rem;
+  color: #143b4b;
+}
+.fg-track__form,
+.fg-track__filters,
+.fg-track__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.fg-track__facts > div,
+.fg-track__device {
+  padding: 1rem;
+  border: 1px solid #e3eaf0;
+  border-radius: 10px;
+  margin: 0.6rem 0;
+}
+.fg-track__facts dt {
+  font-size: 0.8rem;
+  color: #576978;
+}
+.fg-track__facts dd {
+  margin: 0.4rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.fg-track textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #c9d5df;
+  border-radius: 8px;
+  padding: 0.65rem;
+  font: inherit;
+}
+.fg-track fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.fg-track__error {
+  background: #fff0ef;
+  color: #a52726;
+  padding: 1rem;
+  border-radius: 10px;
+}
+.fg-track input[type="range"] {
+  width: 100%;
+  accent-color: #147d70;
+}
+.fg-track a,
+.fg-track p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .fg-track__source {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .fg-track__form,
+  .fg-track__filters,
+  .fg-track__facts {
+    grid-template-columns: 1fr;
+  }
+  .fg-track__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fg-track * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,75 @@
+.fg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color var(--transition-base),
+    border-color var(--transition-base), color var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.fg-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.fg-btn--sm {
+  padding: 0 var(--space-3);
+  height: 32px;
+  font-size: var(--font-size-sm);
+}
+.fg-btn--md {
+  padding: 0 var(--space-4);
+  height: 38px;
+  font-size: var(--font-size-base);
+}
+.fg-btn--lg {
+  padding: 0 var(--space-5);
+  height: 44px;
+  font-size: var(--font-size-md);
+}
+.fg-btn--block {
+  width: 100%;
+}
+
+/* Variants */
+.fg-btn--primary {
+  background: var(--color-primary-500);
+  color: var(--text-inverse);
+}
+.fg-btn--primary:not(:disabled):hover {
+  background: var(--color-primary-600);
+}
+
+.fg-btn--secondary {
+  background: var(--color-white);
+  color: var(--color-primary-700);
+  border-color: var(--color-gray-300);
+}
+.fg-btn--secondary:not(:disabled):hover {
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-300);
+}
+
+.fg-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.fg-btn--ghost:not(:disabled):hover {
+  background: var(--color-gray-100);
+  color: var(--text-primary);
+}
+
+.fg-btn--danger {
+  background: var(--color-danger);
+  color: var(--text-inverse);
+}
+.fg-btn--danger:not(:disabled):hover {
+  filter: brightness(0.95);
+}

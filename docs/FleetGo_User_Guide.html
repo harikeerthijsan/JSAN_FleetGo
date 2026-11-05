@@ -1,0 +1,525 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FleetGo user guide</title><style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #20292d; background: #f0f3f2; font: 17px/1.65 'Segoe UI', Arial, sans-serif; }
+main { max-width: 920px; margin: 32px auto; padding: 54px 64px; background: white; }
+h1,h2,h3 { color: #000; line-height: 1.25; scroll-margin-top: 24px; }
+h1 { font-size: 36px; margin: 0 0 28px; }
+h2 { font-size: 25px; margin: 46px 0 18px; }
+h3 { font-size: 20px; margin: 28px 0 12px; }
+p { margin: 0 0 16px; }
+li { margin-bottom: 9px; padding-left: 4px; }
+ol,ul { padding-left: 26px; margin: 12px 0 22px; }
+a { color: #155b59; text-underline-offset: 3px; }
+nav { margin: 28px 0; }
+nav ul { columns: 2; column-gap: 32px; font-size: 15px; }
+nav li { break-inside: avoid; }
+button { border: 0; border-radius: 6px; background: #174b49; color: white; padding: 12px 18px; font: inherit; cursor: pointer; }
+.tools { max-width: 920px; margin: 24px auto 0; padding: 0 16px; }
+.tools p { font-size: 15px; margin-top: 8px; }
+@media (max-width: 700px) { main { margin: 12px; padding: 28px 22px; } nav ul { columns: 1; } h1 { font-size: 30px; } }
+@page { size: A4; margin: 19mm 19mm 20mm; }
+@media print {
+ body { background: white; color: black; font: 11pt/1.4 Arial, sans-serif; }
+ main { max-width: none; margin: 0; padding: 0; }
+ .tools { display: none; }
+ h1 { font-size: 25pt; }
+ h2 { font-size: 17pt; margin: 22pt 0 10pt; break-after: avoid; }
+ h3 { font-size: 13pt; margin: 15pt 0 7pt; break-after: avoid; }
+ p,li { orphans: 3; widows: 3; }
+ li { margin-bottom: 5pt; }
+ a { color: black; text-decoration: none; }
+ nav ul { font-size: 10pt; }
+}
+</style></head><body>
+<div class="tools"><button type="button" onclick="window.print()">Print or save as PDF</button>
+<p>To share a PDF, select this button, choose Save as PDF in the print window, and check the preview.</p></div><main><h1 id="fleetgo-user-guide">FleetGo user guide</h1>
+<h2 id="about-this-guide">About this guide</h2>
+<p>This guide explains how to use FleetGo to request vehicles, manage stock, arrange vehicle movements, check deliveries, and keep supporting records. It is written for people who do not need technical knowledge to do their work.</p>
+<p>Edition: 4 November 2026. This guide describes the current application. Your account may show fewer menus because access depends on your job, organization, and assigned locations.</p>
+<p>Read sections 1 to 4 first. Then use the task finder to go directly to the work you need to do. Complete only the steps that belong to your role. Button wording may vary between screens; always read the confirmation message before accepting an action.</p>
+<nav aria-label="Guide contents"><h2>Contents</h2><ul><li><a href="#about-this-guide">About this guide</a></li><li><a href="#task-finder">Task finder</a></li><li><a href="#1-getting-started-and-signing-in">1 Getting started and signing in</a></li><li><a href="#2-finding-your-way-around-the-screens">2 Finding your way around the screens</a></li><li><a href="#3-choosing-the-right-work-area">3 Choosing the right work area</a></li><li><a href="#4-understanding-the-words-and-statuses">4 Understanding the words and statuses</a></li><li><a href="#5-reviewing-the-dashboard">5 Reviewing the dashboard</a></li><li><a href="#6-setting-up-master-data">6 Setting up master data</a></li><li><a href="#7-managing-vehicle-records">7 Managing vehicle records</a></li><li><a href="#8-receiving-a-vehicle-into-inventory">8 Receiving a vehicle into inventory</a></li><li><a href="#9-finding-inventory-and-reviewing-its-history">9 Finding inventory and reviewing its history</a></li><li><a href="#10-receiving-several-vehicles-by-bulk-import">10 Receiving several vehicles by bulk import</a></li><li><a href="#11-reserving-a-vehicle">11 Reserving a vehicle</a></li><li><a href="#12-recording-transfers-and-custody-movements">12 Recording transfers and custody movements</a></li><li><a href="#13-checking-physical-stock-through-reconciliation">13 Checking physical stock through reconciliation</a></li><li><a href="#14-creating-and-following-a-ticket">14 Creating and following a ticket</a></li><li><a href="#15-reviewing-and-approving-requests">15 Reviewing and approving requests</a></li><li><a href="#16-allocating-vehicles-to-an-approved-request">16 Allocating vehicles to an approved request</a></li><li><a href="#17-preparing-and-confirming-dispatch">17 Preparing and confirming dispatch</a></li><li><a href="#18-managing-trips-and-operational-exceptions">18 Managing trips and operational exceptions</a></li><li><a href="#19-using-live-tracking">19 Using live tracking</a></li><li><a href="#20-inspecting-a-vehicle">20 Inspecting a vehicle</a></li><li><a href="#21-comparing-photographs-and-resolving-discrepancies">21 Comparing photographs and resolving discrepancies</a></li><li><a href="#22-completing-handover-and-proof-of-delivery">22 Completing handover and proof of delivery</a></li><li><a href="#23-viewing-and-exporting-reports">23 Viewing and exporting reports</a></li><li><a href="#24-administrator-tasks">24 Administrator tasks</a></li><li><a href="#25-features-not-yet-available-as-complete-pages">25 Features not yet available as complete pages</a></li><li><a href="#26-common-problems-and-what-to-do">26 Common problems and what to do</a></li><li><a href="#27-worked-example-of-a-delivery-request">27 Worked example of a delivery request</a></li><li><a href="#28-daily-checklist">28 Daily checklist</a></li></ul></nav>
+<h2 id="task-finder">Task finder</h2>
+<ul>
+<li>Sign in or recover your password: section 1.</li>
+<li>Learn the screen and common controls: section 2.</li>
+<li>Decide which section you need: section 3.</li>
+<li>Understand vehicle and request statuses: section 4.</li>
+<li>Review today&#x27;s work: section 5.</li>
+<li>Add reference information or vehicles: sections 6 and 7.</li>
+<li>Receive, find, reserve, transfer, or count vehicles: sections 8 to 13.</li>
+<li>Request a vehicle or report an issue: section 14.</li>
+<li>Approve a request: section 15.</li>
+<li>Assign vehicles to an approved request: section 16.</li>
+<li>Arrange departure and manage a journey: sections 17 and 18.</li>
+<li>View vehicle locations: section 19.</li>
+<li>Inspect a vehicle or record damage: sections 20 and 21.</li>
+<li>Complete handover and proof of delivery: section 22.</li>
+<li>Download reports: section 23.</li>
+<li>Manage accounts and approval rules: section 24.</li>
+<li>Solve common problems: section 26.</li>
+<li>Follow a complete worked example: section 27.</li>
+</ul>
+<h2 id="1-getting-started-and-signing-in">1 Getting started and signing in</h2>
+<h3 id="before-your-first-sign-in">Before your first sign in</h3>
+<p>Ask your administrator for the FleetGo website address, your account email, your initial password, and the role assigned to you. Ask which depot or organization you should work under. A depot is a place where vehicles are stored or handled.</p>
+<p>The address http://localhost:5173 is the development address on the computer running this application. Other staff should use the website address provided by their administrator. The development address will not automatically open this app on another person&#x27;s computer.</p>
+<h3 id="sign-in">Sign in</h3>
+<ol>
+<li>Open the FleetGo address in your browser.</li>
+<li>Enter your assigned email and password on the sign-in page.</li>
+<li>Click the sign-in button once and wait for the next screen.</li>
+<li>Check the name and role shown near the top right. Make sure you are using your own account.</li>
+<li>Open the required section from the menu on the left.</li>
+</ol>
+<p>Check the result: the dashboard or another permitted page opens. If an access message appears, contact your administrator with the page name.</p>
+<h3 id="if-you-forget-your-password">If you forget your password</h3>
+<ol>
+<li>Select Forgot Password from the sign-in page.</li>
+<li>Enter your account email.</li>
+<li>Select Send reset instructions.</li>
+<li>Follow the reset instructions provided by your organization.</li>
+</ol>
+<p>In the current development setup, email delivery may not be configured. A development reset link may appear on the page. If no usable instructions arrive or appear, ask your administrator to help. A message saying instructions were issued does not prove that an email reached your inbox.</p>
+<h3 id="profile-and-password-changes">Profile and password changes</h3>
+<p>Click your name near the top right. Select My Profile to view your name, email, role, organization information, and permissions. This profile page displays information; ask an administrator to correct account details. Use Change Password from the account menu when you need to replace your password, and complete the fields shown.</p>
+<h3 id="sign-out">Sign out</h3>
+<p>Use the sign-out option in the account menu when finished, especially on a shared computer. Closing a browser tab is not a substitute for signing out.</p>
+<h2 id="2-finding-your-way-around-the-screens">2 Finding your way around the screens</h2>
+<p>The menu on the left opens the main work areas. The menu button can expand or collapse it. On a smaller screen, open the navigation menu to see the sections. Tabs within a section open related tasks, such as Vehicles, Reservations, or Reports.</p>
+<ul>
+<li>Search: enter a known vehicle registration, vehicle code, or reference where the screen supports it.</li>
+<li>Filters: narrow the list by status, depot, dates, or another available choice. Remove filters if an expected record is missing.</li>
+<li>Pages: use the next and previous page controls to see more results. A visible table may contain only part of the full list.</li>
+<li>Record links: select the vehicle code, ticket number, or other linked reference to open its details.</li>
+<li>Required fields: complete fields marked as required. Read messages beside the field or above the form.</li>
+<li>Date and time: check the calendar date and displayed time before saving. Ask your supervisor if you are unsure which operational date to record.</li>
+<li>File uploads: choose the requested photo or document and wait for it to appear. Check that the upload belongs to the correct vehicle.</li>
+<li>Confirmation windows: read the action, vehicle, quantity, and reason before confirming.</li>
+</ul>
+<h3 id="saving-your-work">Saving your work</h3>
+<p>Save stores the information supported by that form. Save as Draft keeps a ticket for later submission. Submit sends a record into its next review stage. Approve records an authorized decision. Confirm can record a significant event, such as allocation or departure.</p>
+<p>After any action, check the success message, resulting status, and record details. Do not assume that opening a record means it was submitted. If you see an unsaved-changes warning, choose Keep editing to preserve the form while you continue. Discard changes abandons the unsaved edits.</p>
+<h3 id="when-a-form-asks-for-an-unfamiliar-reference">When a form asks for an unfamiliar reference</h3>
+<p>Some screens show a technical record identifier, sometimes labelled UUID or ID. Do not invent one. Use a visible selection list where offered, follow a link from the related record, or ask an administrator to identify the correct record. For vehicle receiving, registration number can identify an existing vehicle without filling the optional vehicle UUID.</p>
+<h2 id="3-choosing-the-right-work-area">3 Choosing the right work area</h2>
+<p>Requesters normally work in Ticketing &amp; Approvals and My Tickets. Approvers use Approval Inbox. Stock staff use Inventory Management. Operations staff use Vehicle Allocation and Dispatch &amp; Trips. Drivers and transport partners use the information and actions permitted to their account. Inspectors and receiving staff use Inspections &amp; Handover. Administrators maintain reference information, accounts, and workflow rules.</p>
+<p>Your role may combine several responsibilities. If a menu or button is missing, ask your administrator whether your role includes that task. Records are also limited by organization, custody, and depot assignments. Two users can correctly see different totals.</p>
+<h3 id="the-usual-sequence">The usual sequence</h3>
+<p>Set up reference information → Register or receive a vehicle → Create a request → Approve the request → Allocate vehicles → Prepare inspection and dispatch → Confirm departure → Monitor the journey → Record delivery → Complete receiving checks and handover → Review reports.</p>
+<p>Not every task uses every stage. For example, reporting a maintenance issue starts with an existing vehicle and a maintenance ticket.</p>
+<h2 id="4-understanding-the-words-and-statuses">4 Understanding the words and statuses</h2>
+<h3 id="common-words">Common words</h3>
+<ul>
+<li>Fleet: all vehicle records within the area you can access.</li>
+<li>Inventory: vehicles tracked as stock, including availability, location, and who holds them.</li>
+<li>Custodian: the person or organization currently responsible for holding a vehicle.</li>
+<li>Ticket: a numbered request or issue record.</li>
+<li>Reservation: a temporary hold that blocks a vehicle&#x27;s availability.</li>
+<li>Allocation: assigning a particular vehicle to an approved request.</li>
+<li>Dispatch: a planned and then confirmed vehicle departure.</li>
+<li>Trip: the journey associated with a dispatch.</li>
+<li>Evidence: supporting photos or documents.</li>
+<li>Reconciliation: comparing physical vehicles against the system&#x27;s stock list.</li>
+<li>Discrepancy: a difference or problem, such as damage or a missing accessory.</li>
+<li>SLA: the target time allowed for approval or resolution.</li>
+<li>POD: proof of delivery, a document recording delivery information.</li>
+</ul>
+<h3 id="vehicle-statuses">Vehicle statuses</h3>
+<ul>
+<li>Registered: a vehicle identity has been created; this alone does not make it available stock.</li>
+<li>Received: the vehicle&#x27;s receipt has been recorded.</li>
+<li>Available: eligible for selection, subject to the request and other system checks.</li>
+<li>Reserved: held for a purpose and blocked from normal allocation.</li>
+<li>Allocated: assigned to an approved request.</li>
+<li>Dispatched: departure has been confirmed.</li>
+<li>In Transit: the vehicle is travelling.</li>
+<li>Delivered: delivery has been recorded. This does not automatically make the vehicle available for another request.</li>
+<li>At Vendor: held by a vendor.</li>
+<li>Under Maintenance: recorded as undergoing maintenance.</li>
+<li>Damaged: recorded with a damage status.</li>
+<li>Returned: a return has been recorded.</li>
+<li>Inactive: excluded from normal active use.</li>
+</ul>
+<p>The app controls which status changes are allowed. Use the appropriate operational process instead of changing a status simply to make a blocked action succeed.</p>
+<h3 id="request-progress">Request progress</h3>
+<p>A draft is still being prepared. A submitted request may need one or more approvals. A request for information means the requester must clarify something. Approval allows the next permitted operational steps; it does not prove that a vehicle has departed. Completed or closed records represent a later stage of work. Check both approval progress and operational progress on the ticket.</p>
+<h2 id="5-reviewing-the-dashboard">5 Reviewing the dashboard</h2>
+<p>Purpose: identify work that needs attention and open the relevant records.</p>
+<ol>
+<li>Select Dashboard from the left menu.</li>
+<li>Review the summary cards for fleet, availability, tickets, approvals, trips, and deliveries shown to your role.</li>
+<li>Review monitoring lists for overdue tickets, delayed journeys, pending inspections, or unresolved damage.</li>
+<li>Select a linked card or record to investigate it.</li>
+<li>Return to the dashboard after completing the action and refresh where needed.</li>
+</ol>
+<p>Check the result: the relevant ticket, vehicle, trip, or inspection opens. Totals reflect your permitted records. Dashboard charts summarize data; open a record before making a decision about an individual vehicle.</p>
+<h2 id="6-setting-up-master-data">6 Setting up master data</h2>
+<p>For authorized staff. Master Data contains the shared choices used throughout the app.</p>
+<ol>
+<li>Open Master Data.</li>
+<li>Choose the relevant area: Makes and Models, Types and Categories, Depots, Vendors, or Lookups.</li>
+<li>Check whether the required item already exists.</li>
+<li>Use the available add action and enter the details requested by that form.</li>
+<li>Check spelling and any active or inactive setting, then save.</li>
+<li>Return to the operational form and reload its choices if necessary.</li>
+</ol>
+<p>For a vehicle model, choose the correct make. For a depot, use the agreed location name. Lookups contain choices such as fuel, ownership, and document types. Avoid creating slightly different names for the same item, such as two spellings of one depot. Ask an administrator before changing an item already used by existing records.</p>
+<p>Check the result: the saved item appears in the appropriate reference list and can be selected where applicable.</p>
+<h2 id="7-managing-vehicle-records">7 Managing vehicle records</h2>
+<p>Purpose: maintain the vehicle&#x27;s identity and supporting information. Physical receipt and custody are managed separately in Inventory Management.</p>
+<h3 id="find-a-vehicle">Find a vehicle</h3>
+<ol>
+<li>Open Fleet Management and its vehicle list.</li>
+<li>Search by registration number or vehicle code and apply relevant filters.</li>
+<li>Open the matching vehicle.</li>
+<li>Verify the registration and VIN or chassis number before making any change.</li>
+<li>Review its specifications, status, documents, and photographs.</li>
+</ol>
+<h3 id="add-or-edit-a-vehicle">Add or edit a vehicle</h3>
+<ol>
+<li>Search first to avoid a duplicate record.</li>
+<li>Use the add-vehicle action, or open an existing vehicle and choose Edit if available.</li>
+<li>Enter the identity, make, model, type, and other details requested by the form.</li>
+<li>Use the real registration and chassis information from reliable vehicle documents.</li>
+<li>Save and reopen the record to verify the saved information.</li>
+<li>Add or review documents and photos using the controls available on the vehicle record.</li>
+</ol>
+<p>When adding a document, select its appropriate type and complete any dates or descriptions requested. Check the displayed attachment afterward. A vehicle already controlled by inventory may have restrictions on edits or status changes; use Inventory Management for the corresponding stock operation.</p>
+<h2 id="8-receiving-a-vehicle-into-inventory">8 Receiving a vehicle into inventory</h2>
+<p>Before starting: have the registration number, vehicle details, source, receiving depot, current custodian, receiving date and time, condition, odometer reading, and supporting files ready.</p>
+<ol>
+<li>Open Inventory Management → Receive vehicle.</li>
+<li>Enter the registration number. Use the existing vehicle identity when it is already registered.</li>
+<li>Complete make, model, vehicle type, and assigned organization as requested.</li>
+<li>Enter Received date and time and Received from.</li>
+<li>Select the Receiving depot and the correct custodian type and current custodian.</li>
+<li>Record Initial condition, Odometer in kilometres, and accessories or equipment.</li>
+<li>Add factual remarks, especially for visible damage or missing items.</li>
+<li>Choose the initial photographs and supporting documents.</li>
+<li>Review and submit the receipt using the form&#x27;s action. Confirm if prompted.</li>
+<li>Open the resulting inventory vehicle record and verify its receipt, depot, custody, condition, and evidence.</li>
+</ol>
+<p>Use photographs of the actual vehicle. Do not use a new registration spelling to get around a duplicate warning. Recording receipt does not mean the vehicle is automatically approved for every later operation.</p>
+<h2 id="9-finding-inventory-and-reviewing-its-history">9 Finding inventory and reviewing its history</h2>
+<ol>
+<li>Open Inventory Management → Vehicles.</li>
+<li>Search for a vehicle or filter by depot, status, custody, availability, or receipt dates as offered.</li>
+<li>Open the vehicle to review Identity and initial receiving and Current availability.</li>
+<li>Review reservations, assignment details, photographs, custody history, and chronological movement history.</li>
+<li>If permitted, attach further evidence to the correct record using the available upload controls.</li>
+</ol>
+<p>Check the result: the vehicle identity, current location, custodian, and status agree with the physical facts. A missing vehicle may be on another results page or outside your filters or access. Check those before raising a new vehicle record.</p>
+<h2 id="10-receiving-several-vehicles-by-bulk-import">10 Receiving several vehicles by bulk import</h2>
+<p>For authorized stock staff. Use this for a prepared list rather than entering each receipt separately.</p>
+<ol>
+<li>Open Inventory Management → Bulk import.</li>
+<li>Review the file instructions shown on the screen. Ask your administrator for the agreed spreadsheet format if one has not been supplied.</li>
+<li>Upload a supported Excel or CSV file.</li>
+<li>Match each file column to the corresponding field using the mapping controls.</li>
+<li>Run the preview and inspect the proposed records and validation messages.</li>
+<li>Correct invalid registrations, missing reference choices, duplicates, or other reported problems before committing.</li>
+<li>Confirm the import only after the preview is correct.</li>
+<li>Review the results. Download the error details if offered and compare the successful count with your expected count.</li>
+<li>Spot-check imported vehicle records for depot, custody, dates, and condition.</li>
+</ol>
+<p>Previewing does not complete the import. After a partial or uncertain result, inspect what was actually created before uploading again. If you are unfamiliar with spreadsheets, ask a supervisor to review the first import with you.</p>
+<h2 id="11-reserving-a-vehicle">11 Reserving a vehicle</h2>
+<p>Purpose: temporarily hold a vehicle for a stated requirement. A reservation is separate from allocation to an approved request.</p>
+<ol>
+<li>Open Inventory Management → Reservations.</li>
+<li>In Reserve a vehicle, choose the eligible vehicle.</li>
+<li>Select Requesting organization and Intended depot.</li>
+<li>Enter Start, End, Purpose, and an optional Reference.</li>
+<li>Check the period and vehicle identity, then submit and confirm.</li>
+<li>Verify that the reservation appears and the vehicle&#x27;s availability reflects the hold.</li>
+</ol>
+<p>Important: reservations block availability immediately, including those with a future start date. Do not reserve a vehicle casually.</p>
+<p>To cancel a reservation, open the available cancellation action, enter a clear cancellation reason, confirm, and check the updated status. An active reservation prevents normal allocation in the current workflow. Ask authorized stock staff to review an unneeded reservation before allocating the vehicle; cancellation does not itself allocate it.</p>
+<h2 id="12-recording-transfers-and-custody-movements">12 Recording transfers and custody movements</h2>
+<p>Purpose: record an authorized stock movement or change in who holds a vehicle.</p>
+<ol>
+<li>Open Inventory Management → Transfer.</li>
+<li>Select the vehicle and movement type.</li>
+<li>Select Destination depot or location and the receiving custodian information requested.</li>
+<li>Enter Movement date and time, Reason, and any Reference or ticket number.</li>
+<li>Add the supporting information requested by the form.</li>
+<li>Review the destination and custody details, then submit and confirm.</li>
+<li>Open Movements or the vehicle&#x27;s inventory record to verify the new entry and current custody.</li>
+</ol>
+<p>Reserved, allocated, and dispatched vehicles cannot be transferred through this form. Ask operations staff to review the related reservation, allocation, or dispatch. Do not use a stock transfer to bypass a dispatch or delivery process.</p>
+<h2 id="13-checking-physical-stock-through-reconciliation">13 Checking physical stock through reconciliation</h2>
+<p>Purpose: investigate differences between the vehicles physically present and the system&#x27;s stock list.</p>
+<ol>
+<li>Open Inventory Management → Reconciliation.</li>
+<li>Choose Scope type, such as Depot, Vendor, or Organization, and select the specific Scope.</li>
+<li>Enter useful Session notes and select Review snapshot creation.</li>
+<li>Confirm creation of the snapshot. This is the system&#x27;s stock list at the start of the count.</li>
+<li>Open the session and physically check the vehicles against that list.</li>
+<li>Record the findings using the session controls, including missing, unexpected, damaged, or differently located vehicles where applicable.</li>
+<li>Add clear reasons and evidence for any proposed correction.</li>
+<li>Submit the session for independent review.</li>
+<li>An authorized reviewer checks the evidence and approves or rejects the proposed adjustments.</li>
+<li>Review the final session outcome and resulting vehicle records.</li>
+</ol>
+<p>The person preparing the count cannot act as its independent approver. If stock has moved since the snapshot was created and the app rejects a stale adjustment, stop and ask the reviewer how to refresh or repeat the count. Do not force an old count onto newer stock information.</p>
+<h2 id="14-creating-and-following-a-ticket">14 Creating and following a ticket</h2>
+<p>Purpose: request work and keep its decisions, discussion, and supporting records together.</p>
+<h3 id="choose-the-right-ticket-type">Choose the right ticket type</h3>
+<ul>
+<li>Delivery: request delivery of a vehicle quantity to a location.</li>
+<li>New Vehicle: request a vehicle quantity with a justification.</li>
+<li>Pickup: request collection of an existing vehicle.</li>
+<li>Transfer: request movement of an existing vehicle between locations.</li>
+<li>Return: request return of an existing vehicle.</li>
+<li>Maintenance: report an existing vehicle&#x27;s maintenance issue.</li>
+<li>Damage Incident: report a damage incident involving an existing vehicle.</li>
+<li>Replacement: request replacement of an existing vehicle.</li>
+<li>General: record another request that does not fit the specific types.</li>
+</ul>
+<h3 id="create-and-submit">Create and submit</h3>
+<ol>
+<li>Open Ticketing &amp; Approvals → Create.</li>
+<li>Select Ticket type. The fields change to suit that request.</li>
+<li>Choose an appropriate Priority.</li>
+<li>Enter a specific Subject, such as &quot;Deliver two vehicles to the receiving depot&quot;.</li>
+<li>In Description, explain what is needed and why.</li>
+<li>Complete the displayed details: vehicle or vehicle type, quantity, source, destination, required date, and any additional fields.</li>
+<li>Review any inventory availability information. It is a guide to stock, not a guaranteed allocation.</li>
+<li>Save as a draft if you are still preparing it, or use the submit action when ready.</li>
+<li>Open the ticket details, note its ticket number, and verify that its approval status shows the intended next stage.</li>
+<li>Add supporting attachments or comments from the ticket details where needed.</li>
+</ol>
+<p>If submission fails after the ticket was created, a draft may still exist. Check My Tickets and the ticket status before creating another request. A draft has not been sent through approval.</p>
+<h3 id="follow-up">Follow up</h3>
+<p>Open My Tickets for your own requests, or All Tickets for the records you are permitted to see. Open a ticket to review approval steps, comments, attachments, activity, and operational progress. If more information is requested, read the question, add the required details, and use the available response or resubmission action. Check the status again afterward.</p>
+<p>For a maintenance ticket, describe the observed problem rather than guessing the repair. For a damage incident, include the incident date, place, factual description, and supporting photographs where available.</p>
+<h2 id="15-reviewing-and-approving-requests">15 Reviewing and approving requests</h2>
+<p>For authorized approvers.</p>
+<ol>
+<li>Open Ticketing &amp; Approvals → Approval Inbox.</li>
+<li>Open a pending request and verify its requester, organization, request type, quantity or vehicle, locations, date, and reason.</li>
+<li>Read attachments, comments, and earlier approval decisions.</li>
+<li>Choose Approve if the request is acceptable, Reject if it should not proceed, or Request information if clarification is needed.</li>
+<li>Enter clear remarks and confirm the decision.</li>
+<li>Check the recorded decision and the next approval step or resulting status.</li>
+</ol>
+<p>Example of useful clarification: &quot;Please confirm the receiving contact and the required delivery date.&quot; Give a specific reason for rejection so the requester knows what to correct.</p>
+<p>Some requests have several approval steps. Your approval may move the request to another approver rather than finish the process. The app prevents self-approval where its rules require separation. Reassignment or escalation is available only where your role and the current step allow it.</p>
+<p>Open the SLA tab to monitor target times and overdue work. An overdue label calls for follow-up; it does not mean a request has been automatically approved.</p>
+<h2 id="16-allocating-vehicles-to-an-approved-request">16 Allocating vehicles to an approved request</h2>
+<p>Before starting: the ticket must have completed the required approvals, and eligible vehicles must be available.</p>
+<ol>
+<li>Open Vehicle Allocation and the approved ticket queue.</li>
+<li>Select the ticket and review requested, already allocated, and pending quantities.</li>
+<li>Open the new allocation action for that ticket.</li>
+<li>Check Approved ticket, Source depot, Destination depot, Receiving organization or vendor, Transport partner, Planned dispatch, and Expected delivery as requested.</li>
+<li>In Available inventory selector, search or filter for matching vehicles.</li>
+<li>Verify each registration, vehicle type, depot, and availability before selecting it.</li>
+<li>Select the needed vehicles, review the total, and confirm the allocation.</li>
+<li>Note the allocation reference and verify the selected vehicles in its details.</li>
+</ol>
+<p>If only one of two requested vehicles is available, a partial allocation can assign one while the remaining quantity stays pending. Reserved, damaged, maintenance, vendor-held, inactive, or already allocated vehicles are not normal eligible choices. The app checks availability again when you confirm, so a selection may fail if another user has just assigned the vehicle.</p>
+<p>To cancel an undispatched allocation, open its cancellation action, record the reason, and verify the release. Existing dispatch plans must be cancelled first. Departed vehicles cannot be released through ordinary allocation cancellation.</p>
+<h2 id="17-preparing-and-confirming-dispatch">17 Preparing and confirming dispatch</h2>
+<p>Purpose: record who is transporting the allocated vehicles, when they should arrive, and their departure evidence.</p>
+<ol>
+<li>Open the allocation and follow its dispatch action, or open Dispatch &amp; Trips and create a plan for that allocation.</li>
+<li>Select the vehicles to include. Only eligible items from the allocation can be used.</li>
+<li>Select the transport partner and driver, and enter the schedule and other requested journey details.</li>
+<li>Save the plan. A planned trip is created with the dispatch.</li>
+<li>Open the dispatch details and work through each vehicle&#x27;s readiness checklist.</li>
+<li>Verify identity and registration, odometer, fuel, accessories, keys, and documents.</li>
+<li>Upload the required original FRONT and REAR photos for every vehicle, plus any additional evidence needed.</li>
+<li>Complete the required pre-dispatch inspection process and review any inspection-related block.</li>
+<li>Resolve open high or critical operational exceptions and any other readiness failures.</li>
+<li>Confirm the driver and transporter are correct, the licence is valid through the expected delivery, and the schedule is accurate.</li>
+<li>When the vehicle actually departs, use the departure confirmation action.</li>
+<li>Verify the actual departure, dispatch status, trip status, and transport custody information.</li>
+</ol>
+<p>Confirming departure records an operational event. Do it at the appropriate time, after the real checks. Departure evidence becomes locked afterward, so inspect attachments before confirming.</p>
+<p>If the app says the driver has another active trip, ask operations staff to review that assignment. If an inspection has been started, finish the required submission or review stage; a rejected pre-dispatch inspection blocks departure. Some installations also require a completed pre-dispatch inspection for every vehicle.</p>
+<h2 id="18-managing-trips-and-operational-exceptions">18 Managing trips and operational exceptions</h2>
+<h3 id="update-a-journey">Update a journey</h3>
+<ol>
+<li>Open Dispatch &amp; Trips → Trips and open the correct trip.</li>
+<li>Verify the dispatch reference, vehicles, driver, destination, and planned times.</li>
+<li>Review the timeline and record the next permitted milestone when it occurs.</li>
+<li>Record delays, delivery attempts, and arrival or delivery information accurately.</li>
+<li>Add supporting notes and evidence where requested.</li>
+<li>Check the resulting status and timeline entry.</li>
+</ol>
+<p>Common states include Planned, Ready for Dispatch, Dispatched, In Transit, Delayed, Delivery Attempted, Delivered, Failed Delivery, and Cancelled. Only the permitted next actions are accepted.</p>
+<h3 id="report-an-exception">Report an exception</h3>
+<ol>
+<li>Open the trip&#x27;s exception action or the Exceptions section.</li>
+<li>Choose the relevant issue, such as breakdown, delay, driver unavailable, incorrect destination, missing documents, or failed delivery.</li>
+<li>Select severity and describe what happened, where, and what help is needed.</li>
+<li>Add supporting evidence and save.</li>
+<li>After the issue is handled, an authorized user records resolution notes and resolves it.</li>
+</ol>
+<p>Reporting an exception does not by itself record a new delivery, custody change, or stock location. Record the appropriate operational action separately. After departure, cancellation needs operations review because a cancellation alone does not physically return the vehicle.</p>
+<h3 id="record-delivery">Record delivery</h3>
+<p>Use the authorized trip delivery action when delivery actually occurs. Verify the destination, receiving party, and arrival information. Check that the trip and inventory show the resulting delivery state. Delivery does not automatically make stock Available. Receiving inspection and handover remain separate tasks. A ticket involving several vehicles may stay open until all requested quantities have been delivered.</p>
+<h2 id="19-using-live-tracking">19 Using live tracking</h2>
+<p>Purpose: view recorded vehicle positions and investigate journey alerts.</p>
+<ol>
+<li>Open Live Tracking.</li>
+<li>Check whether the selected source is REAL or SIMULATED.</li>
+<li>Select a vehicle or trip with an active tracking session.</li>
+<li>Review the latest location and its recorded time. An old position does not prove where the vehicle is now.</li>
+<li>Review alerts and session details for further context.</li>
+<li>Use Trip history &amp; replay to examine recorded movement over a period.</li>
+<li>If permitted, acknowledge or resolve alerts with meaningful remarks.</li>
+</ol>
+<p>No position can be shown until data has been received. Real tracking requires a configured provider and an active device mapped to the vehicle. Authorized staff manage GPS devices, mappings, geofences, and provider settings. A geofence is a defined area used to raise location-related alerts.</p>
+<p>SIMULATED data is for development or demonstration. It must not be treated as evidence of a real vehicle&#x27;s location. Arrival near a destination on the map does not confirm delivery or handover; staff must complete the authorized operational steps.</p>
+<h2 id="20-inspecting-a-vehicle">20 Inspecting a vehicle</h2>
+<p>Before starting: physically check the correct vehicle and have clear photographs ready. Choose the inspection that matches the event: initial receipt, pre-dispatch, receiving, or return.</p>
+<ol>
+<li>Open Inspections &amp; Handover → Inspections and use the create action.</li>
+<li>Select the inspection type and correct vehicle, with related dispatch or trip information where requested. A receiving inspection requires a linked dispatch.</li>
+<li>Select the applicable template when offered. A template is the checklist for that kind of inspection.</li>
+<li>Save the draft and complete its condition information and checklist responses.</li>
+<li>Add all required photo categories and any supporting files. Verify each image belongs to this vehicle and event.</li>
+<li>For receiving, select the correct outcome. Record discrepancies when the outcome reports damage or differences; give a reason if rejecting receipt.</li>
+<li>Check the entire draft, then submit it.</li>
+<li>An authorized reviewer approves or rejects the submitted inspection with remarks.</li>
+<li>After approval and resolution of any outstanding discrepancies, an authorized user completes the inspection.</li>
+<li>Verify the final status and linked records.</li>
+</ol>
+<p>Once submitted, an inspection cannot be edited like a draft. Use the amendment process if a correction is needed. It creates a new version and retains the original record and photos. Ask the responsible reviewer if you cannot see the required action.</p>
+<p>Take a clear overall view and close-ups of damage. Use factual notes such as &quot;scratch on left rear door&quot; rather than an unsupported conclusion about who caused it.</p>
+<h2 id="21-comparing-photographs-and-resolving-discrepancies">21 Comparing photographs and resolving discrepancies</h2>
+<h3 id="compare-condition-evidence">Compare condition evidence</h3>
+<ol>
+<li>Open Inspections &amp; Handover → Comparison.</li>
+<li>Select the vehicle and related dispatch where requested.</li>
+<li>Compare the same photo category across the available inspection stages.</li>
+<li>Check the date, uploader, and record reference for each image.</li>
+<li>If there is a difference that needs investigation, record a discrepancy with relevant evidence.</li>
+</ol>
+<p>Image differences are supporting information. The current app does not automatically decide that a person caused damage, and an AI damage detector is not supplied.</p>
+<h3 id="record-and-resolve-a-discrepancy">Record and resolve a discrepancy</h3>
+<ol>
+<li>Open Discrepancies or the linked inspection&#x27;s discrepancy action.</li>
+<li>Select the vehicle and related inspection or dispatch.</li>
+<li>Record the category, severity, factual description, and supporting evidence.</li>
+<li>Save and note its reference.</li>
+<li>Authorized staff investigate, add comments or evidence, and use the permitted status changes with remarks.</li>
+<li>Confirm that the issue reaches its appropriate resolved outcome before completing a receiving inspection that depends on it.</li>
+</ol>
+<p>Confirmation of major or critical damage can mark the vehicle Damaged in inventory. Review the vehicle&#x27;s resulting status before planning further use. A receiving inspection cannot be completed while unresolved discrepancies remain.</p>
+<h2 id="22-completing-handover-and-proof-of-delivery">22 Completing handover and proof of delivery</h2>
+<p>Purpose: record the transfer between parties and retain delivery documentation.</p>
+<ol>
+<li>Open Inspections &amp; Handover → Handover.</li>
+<li>Create or open the appropriate handover for the vehicle and related operational record.</li>
+<li>Verify the handing-over party, receiving party, destination, and linked inspection information.</li>
+<li>Record each required acknowledgement using the controls available to the authorized parties.</li>
+<li>Review and confirm the handover when its requirements are satisfied.</li>
+<li>Check the completed handover record and any remaining required actions.</li>
+<li>Open Proof of delivery and select or create the document for the relevant dispatch and vehicle.</li>
+<li>Review its details before printing or saving it.</li>
+</ol>
+<p>The default interface records named acknowledgements; do not expect a handwritten signature pad. Proof of delivery uses a printable page. To save it as a PDF, open the print view, press Ctrl+P, choose Save as PDF or your browser&#x27;s equivalent, and save with a meaningful filename. Check the print preview first.</p>
+<h2 id="23-viewing-and-exporting-reports">23 Viewing and exporting reports</h2>
+<ol>
+<li>Open Reports.</li>
+<li>Choose Fleet, Inventory, Tickets &amp; Approvals, Dispatch &amp; Delivery, GPS Tracking, Inspection &amp; Damage, or Vendor Performance.</li>
+<li>Select the report type and relevant date, depot, organization, vendor, status, or source filters offered.</li>
+<li>Review the summary and table. Use page controls to see further results.</li>
+<li>Follow a linked record if you need the full operational details.</li>
+<li>Export to CSV, Excel, or the printable PDF option as available.</li>
+<li>Open the downloaded file and check its heading, filters, and contents before sharing.</li>
+</ol>
+<p>CSV is a simple data file commonly opened in a spreadsheet. Excel provides a spreadsheet file. The PDF option opens a print-ready document; use the browser&#x27;s Save as PDF function to produce the PDF file.</p>
+<p>Use Report Builder to choose a report configuration. Save a frequently used configuration and reopen it under Saved Reports. Saving a configuration keeps your choices; it does not freeze the underlying business data. Export History shows recorded report generations.</p>
+<p>Reports use your permitted records. Different roles can see different results. Exports are limited to 5,000 rows per file, so narrow the dates or other filters for larger datasets. REAL and SIMULATED GPS sources should be kept distinct when reviewing results.</p>
+<p>Scheduled-report configuration currently records settings and run status. It does not automatically email reports or provide an external delivery service. Do not rely on a schedule as proof that somebody received a report.</p>
+<h2 id="24-administrator-tasks">24 Administrator tasks</h2>
+<h3 id="users">Users</h3>
+<ol>
+<li>Open User Management and its Users area.</li>
+<li>Search for the person before adding a new account.</li>
+<li>Use the add or edit action and complete the requested name, email, organization, and role details.</li>
+<li>Check that the organization and role match the person&#x27;s actual responsibilities.</li>
+<li>Save, then review the resulting account entry.</li>
+<li>Use the available status or password-reset actions when appropriate and confirm the result.</li>
+</ol>
+<p>An inactive account is prevented from normal active use according to the account rules. Check with the responsible manager before changing another person&#x27;s access.</p>
+<h3 id="roles-and-organizations">Roles and organizations</h3>
+<p>Use the Roles area to inspect the access assigned to roles and make only the changes the screen permits. Use Organizations to maintain the organizations referenced by accounts and operational records. A user&#x27;s organization affects which information they can see. Never assign broad administrator access simply to work around a missing button.</p>
+<h3 id="approval-workflows-and-inspection-templates">Approval workflows and inspection templates</h3>
+<p>Authorized administrators use Ticketing &amp; Approvals → Workflows to maintain request approval rules and ordered steps. Review the request type, approver roles, step order, and time targets before saving.</p>
+<p>Authorized inspection managers use Inspections &amp; Handover → Templates to maintain inspection checklists and required photos. Coordinate changes with the people performing inspections so they know what evidence is required.</p>
+<h2 id="25-features-not-yet-available-as-complete-pages">25 Features not yet available as complete pages</h2>
+<p>The separate Vendor Management page is a placeholder. Use Master Data for vendor reference records and the existing inventory, transporter, inspection, and reporting features for their implemented tasks.</p>
+<p>Disk Logistics is a placeholder. The current page does not provide a complete process for recording disk or media movements.</p>
+<p>The general Settings page is a placeholder. Some specific settings exist within implemented modules, such as tracking, but that does not make the general Settings page functional.</p>
+<h2 id="26-common-problems-and-what-to-do">26 Common problems and what to do</h2>
+<h3 id="the-website-does-not-open">The website does not open</h3>
+<p>Check that you are using the address supplied by your administrator. If using the local development address, the application must be running on that computer. Tell support the address and the message displayed by the browser.</p>
+<h3 id="my-password-is-rejected">My password is rejected</h3>
+<p>Check the email spelling, keyboard Caps Lock, and accidental spaces. Use Forgot Password or ask the administrator for account help. Repeated attempts with an uncertain password are unlikely to solve an inactive-account problem.</p>
+<h3 id="a-menu-is-missing-or-access-is-denied">A menu is missing or access is denied</h3>
+<p>Ask the administrator to check your role, organization, and depot assignments. Include the task you need to perform. A link to a restricted page will not grant permission.</p>
+<h3 id="the-list-is-empty-or-a-record-is-missing">The list is empty or a record is missing</h3>
+<p>Remove filters, widen the dates, check other pages, and verify the reference. Ask whether the record belongs to another organization, location, or custodian. An empty list does not necessarily mean the business has no records.</p>
+<h3 id="a-save-or-submit-fails">A save or submit fails</h3>
+<p>Read the full error and check required fields, dates, quantity, and reference choices. If the connection failed after clicking, reopen the list or record to see whether the change was saved before trying again. Avoid duplicate receipts, requests, or imports.</p>
+<h3 id="a-vehicle-cannot-be-allocated">A vehicle cannot be allocated</h3>
+<p>Check its current status, depot, reservation, and existing allocation. Check that the ticket is fully approved, has a remaining quantity, and matches the vehicle requirements. Ask operations or inventory staff to resolve the actual restriction.</p>
+<h3 id="departure-is-blocked">Departure is blocked</h3>
+<p>Open the readiness information. Check driver and licence validity, transporter, other active driver trips, vehicle checklist, required photos, inspection state, and high or critical exceptions. Correct the reported problem and check readiness again.</p>
+<h3 id="a-photo-or-document-will-not-upload">A photo or document will not upload</h3>
+<p>Confirm it is a supported file and within the size limits shown by the app. Check that the file opens normally on your computer. Use a clear original image or supported document and wait for the upload result. Give support the file type and error, without sending unrelated confidential files.</p>
+<h3 id="the-map-is-blank-or-the-location-is-old">The map is blank or the location is old</h3>
+<p>Check the source filter and location timestamp. The vehicle may have no mapped active device, no active session, or no recent GPS data. Ask tracking support to investigate. A blank map does not mean the vehicle has arrived.</p>
+<h3 id="i-cannot-edit-a-submitted-inspection">I cannot edit a submitted inspection</h3>
+<p>This protects the submitted record. Ask an authorized user to create an amendment. The original evidence remains in the earlier version.</p>
+<h3 id="i-cannot-complete-a-receiving-inspection">I cannot complete a receiving inspection</h3>
+<p>Check review status and unresolved discrepancies. Resolve the outstanding items through their authorized workflow, then try the completion action again.</p>
+<h3 id="a-report-differs-from-a-colleague-s">A report differs from a colleague&#x27;s</h3>
+<p>Compare report type, dates, filters, role, organization, depot scope, and GPS source. Check whether records changed between the two report runs.</p>
+<h3 id="what-to-send-support">What to send support</h3>
+<p>Provide your name and organization, the page name, ticket or vehicle reference, approximate date and time, what you tried to do, and the exact error text. Include a screenshot if permitted by your organization. Never include your password or password reset token.</p>
+<h2 id="27-worked-example-of-a-delivery-request">27 Worked example of a delivery request</h2>
+<p>This example uses two vehicles and a receiving depot. Choose the real names and details for your work.</p>
+<ol>
+<li>The requester opens Create under Ticketing &amp; Approvals, chooses Delivery, requests a quantity of two, selects the vehicle type and destination, and enters the required date and contact information.</li>
+<li>The requester submits and verifies the ticket is awaiting approval rather than remaining a draft.</li>
+<li>Each assigned approver reviews the request and records a decision. Operations proceeds after all required approvals are complete.</li>
+<li>Operations opens the approved ticket queue and allocates two eligible Available vehicles. If only one is available, operations can allocate one and leave one pending.</li>
+<li>Operations plans the dispatch, selects the transporter and driver, and enters the expected delivery time.</li>
+<li>Staff inspect each vehicle, record the checklist, keys, documents, fuel and odometer, and upload the required photos.</li>
+<li>Operations resolves readiness failures and confirms departure when the vehicles actually leave.</li>
+<li>Tracking staff review recorded locations where GPS is configured. Operations records journey milestones and any exceptions.</li>
+<li>An authorized user records actual delivery and checks the destination and recipient details.</li>
+<li>Receiving staff inspect each vehicle, record discrepancies if present, obtain the required review, and resolve outstanding issues.</li>
+<li>Authorized parties complete the handover acknowledgements and confirmation. Staff review and print or save proof of delivery.</li>
+<li>The requester checks ticket progress. Operations confirms the full requested quantity has been delivered, and reporting staff review the resulting records.</li>
+</ol>
+<h2 id="28-daily-checklist">28 Daily checklist</h2>
+<h3 id="at-the-start-of-the-day">At the start of the day</h3>
+<ul>
+<li>Sign in to your own account and review the dashboard.</li>
+<li>Check approvals, overdue requests, planned departures, delayed journeys, and pending receiving work relevant to your role.</li>
+<li>Open individual records before deciding what action is needed.</li>
+</ul>
+<h3 id="before-confirming-an-action">Before confirming an action</h3>
+<ul>
+<li>Verify the vehicle registration and record reference.</li>
+<li>Check quantity, dates, source, destination, and responsible parties.</li>
+<li>Review supporting photographs and documents.</li>
+<li>Read the confirmation message and understand what it records.</li>
+</ul>
+<h3 id="before-finishing">Before finishing</h3>
+<ul>
+<li>Check that submitted work has the expected status.</li>
+<li>Record unresolved issues with enough detail for the next person.</li>
+<li>Save or deliberately discard unfinished drafts.</li>
+<li>Sign out, especially on a shared computer.</li>
+</ul></main></body></html>

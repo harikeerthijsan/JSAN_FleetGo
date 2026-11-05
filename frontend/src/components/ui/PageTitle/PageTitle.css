@@ -1,0 +1,28 @@
+.fg-pagetitle {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+
+.fg-pagetitle__heading {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.fg-pagetitle__desc {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  max-width: 640px;
+}
+
+.fg-pagetitle__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}

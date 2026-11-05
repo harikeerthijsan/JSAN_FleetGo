@@ -1,0 +1,47 @@
+/* Shared motion language: brief entrances, tactile controls, soft light. */
+:root { --ease-out-premium: cubic-bezier(.22, 1, .36, 1); }
+@keyframes fg-page-reveal { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fg-rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fg-chart-reveal { from { opacity: .3; transform: scaleX(0); } to { opacity: 1; transform: scaleX(1); } }
+@keyframes fg-route-draw { from { stroke-dashoffset: 650; } to { stroke-dashoffset: 0; } }
+@keyframes fg-orbit-arrive { from { opacity: 0; transform: rotate(-25deg) scale(.9); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .fg-shell__content { animation: fg-page-reveal 350ms ease-out; }
+  .fg-shell__content .fg-pagetitle { animation: fg-rise-in 500ms var(--ease-out-premium) both; }
+  .fg-dash__hero { animation: fg-rise-in 650ms var(--ease-out-premium) both; }
+  .fg-dash__fleet-cards > .fg-card { animation: fg-rise-in 400ms var(--ease-out-premium) backwards; }
+  .fg-dash__fleet-cards > .fg-card:nth-child(2) { animation-delay: 45ms; }
+  .fg-dash__fleet-cards > .fg-card:nth-child(3) { animation-delay: 90ms; }
+  .fg-dash__fleet-cards > .fg-card:nth-child(4) { animation-delay: 135ms; }
+  .fg-dash__fleet-cards > .fg-card:nth-child(5) { animation-delay: 180ms; }
+  .fg-dash__fleet-cards > .fg-card:nth-child(6) { animation-delay: 225ms; }
+  .fg-barchart__bar { transform-origin: left center; animation: fg-chart-reveal 800ms var(--ease-out-premium) both; }
+  .fg-donut__svg { animation: fg-page-reveal 800ms ease-out; }
+  .fg-dash__orbit { animation: fg-orbit-arrive 1s var(--ease-out-premium) both; }
+  .fg-auth__story-content { animation: fg-rise-in 850ms var(--ease-out-premium) both; }
+  .fg-auth__card { animation: fg-rise-in 750ms 100ms var(--ease-out-premium) both; }
+  .fg-auth__map svg > path:nth-child(3) { stroke-dasharray: 650; animation: fg-route-draw 1800ms 350ms var(--ease-out-premium) both; }
+  .fg-btn, .fg-sidebar__link, .fg-header__icon-btn { transition: transform 200ms var(--ease-out-premium), background-color 200ms ease, color 200ms ease, box-shadow 200ms ease; }
+  .fg-btn:not(:disabled):active { transform: scale(.97); }
+  .fg-shell--premium .fg-card { transition: box-shadow 250ms ease, border-color 250ms ease; }
+  .fg-table tbody tr { transition: background-color 180ms ease; }
+  .fg-checklist li { transition: background-color 200ms ease, border-color 200ms ease; }
+  .fg-header__menu { animation: fg-rise-in 180ms var(--ease-out-premium) both; }
+  @media (hover: hover) {
+    .fg-btn:not(:disabled):hover { transform: translateY(-1px); }
+    .fg-shell--premium .fg-card[role="link"]:hover { border-color: #8fc9b0; box-shadow: 0 5px 18px #193d3210; }
+    .fg-sidebar__link:hover { transform: translateX(2px); }
+    .fg-checklist li:hover { border-color: #c9dbd0; background: #edf5ee; }
+    .fg-dash__hero-link:hover svg { transform: translateX(4px); }
+  }
+}
+.fg-dash__hero { background-image: radial-gradient(ellipse at 85% 20%, #6cae9620, transparent 65%); }
+.fg-auth__story { background-image: radial-gradient(ellipse at 20% 30%, #6cae9615, transparent 65%); }
+.fg-dash__hero-link svg { transition: transform 200ms ease; }
+.fg-btn--primary:focus-visible { box-shadow: 0 0 0 4px #8fc9b044; }
+/* Disable decorative motion, including existing component animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .fg-stat:hover, .fg-btn:hover, .fg-sidebar__link:hover { transform: none !important; }
+}
+

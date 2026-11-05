@@ -1,0 +1,67 @@
+/* ==========================================================================
+   FleetGo — preference-driven theme & density (Phase 12)
+   Applied via data-theme / data-density on <html> by AppConfigProvider.
+   The app's structural tokens live in variables.css; this file remaps them for
+   dark mode and tightens spacing for compact density. It also defines the
+   `--color-*` aliases used by the Phase 10–12 module stylesheets so they track
+   the active theme instead of their hard-coded fallbacks.
+   ========================================================================== */
+
+/* Alias tokens used by newer module CSS (disk/vendor/settings), mapped onto the
+   canonical design tokens so a theme change cascades to them too. */
+:root {
+  --color-surface: var(--surface-card);
+  --color-surface-alt: var(--color-gray-100);
+  --color-border: var(--border-color);
+  --color-text: var(--text-primary);
+  --color-text-muted: var(--text-secondary);
+  --color-accent: var(--color-primary-500);
+}
+
+/* ---- Dark theme ---------------------------------------------------------- */
+html[data-theme='dark'] {
+  --color-white: #0f1b1f;
+
+  --surface-page: #0c1619;
+  --surface-card: #122025;
+  --surface-header: #122025;
+  --surface-sidebar: #0a1417;
+  --border-color: #24363b;
+
+  --text-primary: #e6eeec;
+  --text-secondary: #9fb1ab;
+  --text-inverse: #e6eeec;
+
+  --color-gray-50: #0c1619;
+  --color-gray-100: #16262b;
+  --color-gray-200: #24363b;
+  --color-gray-300: #32474d;
+
+  --color-info-bg: #16262b;
+  --color-neutral-bg: #16262b;
+
+  /* module aliases */
+  --color-surface: #122025;
+  --color-surface-alt: #16262b;
+  --color-border: #24363b;
+  --color-text: #e6eeec;
+  --color-text-muted: #9fb1ab;
+  --color-accent: #4fd1b5;
+
+  color-scheme: dark;
+}
+
+html[data-theme='dark'] body {
+  background: var(--surface-page);
+  color: var(--text-primary);
+}
+
+/* ---- Compact density ----------------------------------------------------- */
+html[data-density='compact'] {
+  --space-3: 0.5rem;
+  --space-4: 0.65rem;
+  --space-5: 0.85rem;
+  --space-6: 1rem;
+  --space-8: 1.35rem;
+  --header-height: 60px;
+}

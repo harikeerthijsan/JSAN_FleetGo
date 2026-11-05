@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/*.log
+.git
+.gitignore
+.tmp
+images
+ui-backups
+backend/storage
+backend/uploads
+docs
+scripts/local-db.ps1
+*.md
