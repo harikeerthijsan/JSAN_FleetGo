@@ -25,5 +25,5 @@ Thumbs.db
 .vscode/
 
 # Local file storage (dev uploads)
-storage/
-uploads/
+/storage/
+/uploads/
