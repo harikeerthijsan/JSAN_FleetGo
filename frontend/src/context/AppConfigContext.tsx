@@ -19,14 +19,13 @@ interface AppConfigValue {
 
 const AppConfigContext = createContext<AppConfigValue | null>(null);
 
-const prefersDark = () =>
-  typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-
 function applyToDocument(prefs: UserPreferences | null) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  const theme = prefs?.theme ?? "system";
-  const resolved = theme === "system" ? (prefersDark() ? "dark" : "light") : theme;
+  // Light is the hard default: dark is applied ONLY when a user has explicitly
+  // chosen it. "system" (and anything else) resolves to light, so the OS dark
+  // setting never darkens the app on its own.
+  const resolved = prefs?.theme === "dark" ? "dark" : "light";
   root.dataset.theme = resolved;
   root.dataset.density = prefs?.density ?? "comfortable";
 }
@@ -56,15 +55,6 @@ export function AppConfigProvider({ children }: { children: ReactNode }) {
       }
     };
   }, []);
-
-  // Re-resolve "system" theme if the OS preference changes while signed in.
-  useEffect(() => {
-    if (!window.matchMedia) return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => preferences?.theme === "system" && applyToDocument(preferences);
-    mq.addEventListener?.("change", handler);
-    return () => mq.removeEventListener?.("change", handler);
-  }, [preferences]);
 
   const applyPreferences = useCallback((prefs: UserPreferences) => {
     setPreferences(prefs);

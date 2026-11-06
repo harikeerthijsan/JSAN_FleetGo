@@ -75,7 +75,9 @@ async function ensureSeeded() {
   );
 }
 
-const DEFAULT_PREFS = { theme: "system", density: "comfortable", defaultLanding: null as string | null, notifyEmail: true, notifyInApp: true };
+// Light by default (not "system") so a new user is never shown dark mode based
+// on their OS setting; dark is opt-in via Settings.
+const DEFAULT_PREFS = { theme: "light", density: "comfortable", defaultLanding: null as string | null, notifyEmail: true, notifyInApp: true };
 
 export const settingsService = {
   SETTING_DEFS,
