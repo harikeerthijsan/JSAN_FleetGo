@@ -31,11 +31,16 @@ RUN npm ci
 COPY backend/prisma ./prisma
 RUN npx prisma generate
 COPY --from=backend /app/backend/dist ./dist
+# TypeScript source is needed because the Prisma seed (run via tsx on boot)
+# imports the RBAC permission catalogue from src/modules/auth/rbac.
+COPY backend/src ./src
 # Built SPA, served by the backend (see app.ts / FRONTEND_DIST).
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 ENV FRONTEND_DIST=/app/frontend/dist
 # Railway injects PORT; the app reads it (defaults to 4000 locally).
 EXPOSE 4000
-# Apply migrations on boot, then start the server. (Seeding/role-enablement is a
-# separate one-time step — see DEPLOY.md.)
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# On boot: apply migrations (fatal if they fail — don't run on a broken schema),
+# then seed (idempotent: upserts roles/permissions/accounts/sample data; never
+# resets existing passwords — non-fatal so a seed hiccup can't block startup),
+# then start the server.
+CMD ["sh", "-c", "npx prisma migrate deploy && { npm run db:seed || echo 'Seed step skipped/failed; continuing'; } && node dist/server.js"]

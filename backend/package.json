@@ -36,7 +36,7 @@
     "setup:all": "prisma migrate deploy && prisma db seed && npm run enable:all"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
