@@ -112,6 +112,13 @@ export const NAV_ITEMS: NavItem[] = [
     permission: ['users:read', 'roles:read', 'organizations:read'],
   },
   {
+    path: '/claims',
+    label: 'Insurance Claims',
+    icon: 'alert',
+    description: 'Report vehicle incidents and track insurance claims.',
+    permission: 'claims:read',
+  },
+  {
     path: '/settings',
     label: 'Settings',
     icon: 'settings',

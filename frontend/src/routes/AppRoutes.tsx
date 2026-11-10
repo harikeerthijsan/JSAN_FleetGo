@@ -30,6 +30,7 @@ import { OrganizationsPage } from '@/modules/users/pages/OrganizationsPage';
 import { RolesPage } from '@/modules/users/pages/RolesPage';
 import { UserManagementPage } from '@/modules/users/pages/UserManagementPage';
 import { SettingsPage } from '@/modules/settings/pages/SettingsPage';
+import { ClaimsPage } from '@/modules/claims/pages/ClaimsPage';
 import { NotFoundPage } from '@/pages/NotFound/NotFoundPage';
 import { ProtectedRoute, RequirePermission } from './guards';
 
@@ -241,6 +242,14 @@ export function AppRoutes() {
             element={
               <RequirePermission anyOf={['organizations:read']}>
                 <OrganizationsPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/claims/*"
+            element={
+              <RequirePermission anyOf={['claims:read', 'claims:report', 'claims:manage']}>
+                <ClaimsPage />
               </RequirePermission>
             }
           />

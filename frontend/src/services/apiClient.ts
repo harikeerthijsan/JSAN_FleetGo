@@ -27,6 +27,11 @@ export const apiClient = axios.create({
 const refreshClient = axios.create({ baseURL, withCredentials: true });
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // Let the browser supply the multipart boundary for file uploads. Leaving
+  // the JSON default in place makes Axios serialize FormData as JSON.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    config.headers.delete('Content-Type');
+  }
   const token = tokenStore.get();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;

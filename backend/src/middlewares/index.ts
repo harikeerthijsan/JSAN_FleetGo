@@ -11,4 +11,4 @@ export {
   loadAuthenticatedUser,
 } from './auth';
 export { authRateLimiter } from './rateLimit';
-export { uploadSingle, uploadMediaSingle } from './upload';
+export { uploadSingle, uploadMediaSingle, uploadClaimMedia } from './upload';

@@ -18,6 +18,7 @@ const scenes: Record<string, { image: string; title: string; caption: string }> 
   inspections: { image: lakeside, title: 'Confidence in every handover.', caption: 'Inspections and handover' },
   vendors: { image: garden, title: 'Great journeys take great partners.', caption: 'Vendor management' },
   reports: { image: coast, title: 'See the bigger picture.', caption: 'Reports and insights' },
+  claims: { image: lakeside, title: 'Care for every car. Clarity for every claim.', caption: 'Insurance claims and incident management' },
 };
 
 export function AutomotiveBanner() {

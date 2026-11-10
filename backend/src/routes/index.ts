@@ -19,6 +19,7 @@ import { ticketsRoutes } from '../modules/tickets/tickets.routes';
 import { approvalsRoutes } from '../modules/tickets/approvals.routes';
 import { vendorsRoutes } from '../modules/vendors/vendors.routes';
 import { settingsRoutes } from '../modules/settings/settings.routes';
+import { claimsRoutes } from '../modules/claims/claims.routes';
 
 /**
  * API v1 root router.
@@ -60,5 +61,6 @@ router.use('/tickets', ticketsRoutes);
 router.use('/approvals', approvalsRoutes);
 router.use('/vendors', vendorsRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/claims', claimsRoutes);
 
 export const apiV1Router = router;

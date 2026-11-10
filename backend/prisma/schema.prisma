@@ -533,6 +533,8 @@ model Vehicle {
   statusHistory VehicleStatusHistory[]
   // Phase 4 — 1:1 inventory record (additive; the only new relation on Vehicle).
   inventory     VehicleInventory?
+  // Insurance claims raised against this vehicle (additive).
+  insuranceClaims InsuranceClaim[]
 
   @@index([status])
   @@index([organizationId])
@@ -2669,4 +2671,131 @@ model UserProfile {
   updatedAt             DateTime  @updatedAt
 
   @@map("user_profiles")
+}
+
+// ----------------------------------------------------------------------------
+// Insurance Claims — a vendor reports an incident (accident/theft/…) on a
+// vehicle with evidence; a receiver processes it with the insurer and records
+// the outcome. Additive; nothing else is modified.
+// ----------------------------------------------------------------------------
+enum ClaimIncidentType {
+  ACCIDENT
+  THEFT
+  FIRE
+  VANDALISM
+  NATURAL_DISASTER
+  THIRD_PARTY
+  OTHER
+}
+
+enum ClaimDamageLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+/// Overall processing status the user asked for: Open → WIP → Closed.
+enum ClaimStatus {
+  OPEN
+  WIP
+  CLOSED
+}
+
+/// Sub-status with the insurer, maintained by the receiver.
+enum ClaimInsuranceStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  PARTIALLY_APPROVED
+  REJECTED
+  SETTLED
+}
+
+enum ClaimAttachmentKind {
+  PHOTO
+  VIDEO
+  DOCUMENT
+}
+
+model InsuranceClaim {
+  id             String  @id @default(uuid())
+  reference      String  @unique
+  // What & where (vendor-reported).
+  vehicleId      String
+  vehicle        Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  organizationId String? // claimant org (vendor) — drives data isolation
+  incidentType   ClaimIncidentType @default(ACCIDENT)
+  category       String?
+  incidentDate   DateTime?
+  city           String?
+  location       String?
+  damageLevel    ClaimDamageLevel  @default(MEDIUM)
+  description    String
+
+  // Police complaint (optional).
+  policeComplaint       Boolean @default(false)
+  policeComplaintNumber String?
+  policeStation         String?
+
+  // Receiver / insurer side.
+  status           ClaimStatus          @default(OPEN)
+  insuranceStatus  ClaimInsuranceStatus @default(NOT_SUBMITTED)
+  insurerName      String?
+  policyNumber     String?
+  insurerClaimRef  String?
+  acknowledged     Boolean   @default(false)
+  acknowledgedById String?
+  acknowledgedAt   DateTime?
+
+  currency          String  @default("INR")
+  estimatedAmount   Float? // estimated cost of damage (claimed)
+  approvedPercentage Float? // % of damage approved by the insurer
+  payableAmount     Float? // amount that will actually be paid
+
+  reportedById   String?
+  idempotencyKey String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  attachments ClaimAttachment[]
+  events      ClaimEvent[]
+
+  @@index([vehicleId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("insurance_claims")
+}
+
+/// Photos / videos / documents for a claim. Bytes live in object storage; only
+/// metadata here.
+model ClaimAttachment {
+  id           String              @id @default(uuid())
+  claimId      String
+  claim        InsuranceClaim      @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  kind         ClaimAttachmentKind @default(PHOTO)
+  fileName     String
+  storageKey   String
+  contentType  String
+  size         Int
+  caption      String?
+  uploadedById String?
+  createdAt    DateTime            @default(now())
+
+  @@index([claimId])
+  @@map("claim_attachments")
+}
+
+/// Append-only claim timeline (status/insurance changes, acknowledgement, notes).
+model ClaimEvent {
+  id        String         @id @default(uuid())
+  claimId   String
+  claim     InsuranceClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  type      String
+  note      String?
+  actorId   String?
+  createdAt DateTime       @default(now())
+
+  @@index([claimId])
+  @@map("claim_events")
 }

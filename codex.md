@@ -329,3 +329,92 @@
 - Frontend (`UserFormModal.tsx` + `.css`, `types/auth.ts`, `userService.ts`): the user form now shows role-aware fields — when the selected role is `TRANSPORTER_DRIVER` it shows a Driver licence section (number/class/expiry) + date of birth; all roles get address (line/city/state/postal) and emergency contact. Values load on edit and submit in create/update payloads.
 - Verification: backend + frontend typecheck and frontend production build pass. Live check: created a user with the driver role and a full profile via the API; GET /users/:id returned the stored profile (licence, address, emergency contact, DOB) intact.
 - Limitation: licence fields are collected only for the driver role (hidden for others); they are optional (not enforced-required) so a driver can still be saved without a licence if left blank.
+
+### 2026-11-05 — Railway deployment setup + push to GitHub (by Claude)
+
+- Goal: make the app hostable on Railway and push to https://github.com/harikeerthijsan/JSAN_FleetGo.git
+- Topology: single web service that serves the REST API and the built React SPA from one origin (avoids CORS / cross-site cookies), plus a Railway PostgreSQL.
+- Backend (`src/app.ts`): serves the built frontend when present (`FRONTEND_DIST` or `../../frontend/dist`) with an SPA fallback for non-API GET routes; the bare `/` serves the app when the SPA is present (API welcome only in API-only mode); API paths still return JSON 404. Disabled helmet CSP (the service serves hashed SPA assets, web workers and external map tiles). `backend/package.json`: added `enable:all` and `setup:all` (migrate + seed + enable every module) for one-time post-deploy data setup.
+- New files: `Dockerfile` (multi-stage: build frontend, build backend + prisma generate, runtime on node:20-slim + openssl; CMD runs `prisma migrate deploy` then `node dist/server.js`), `.dockerignore`, `railway.json` (Dockerfile builder, healthcheck `/api/v1/health`), root `.env.example` (Railway vars) and `DEPLOY.md` (step-by-step). `.gitignore`: also ignore `.tmp/`, `ui-backups/`, `images/`, `backend/storage|uploads` (scratch/ephemeral).
+- Verification: built the Docker image locally (`docker build`, exit 0) and ran the container against the dev Postgres — `prisma migrate deploy` ran, DB connected, `/api/v1/health` 200, `/` serves the SPA, deep-link `/vendors` serves index.html, API still returns JSON. Backend typecheck passes.
+- Git: initialised repo (branch `main`), committed 366 files (verified no `.env`, `node_modules`, `dist`, `images`, `.tmp`, `storage` staged), added remote `origin` and pushed — remote `main` = commit 9cf48a3.
+- Limitations/notes: uploaded files are ephemeral on Railway (filesystem resets per deploy) — attach a Volume + set `STORAGE_LOCAL_PATH`, or wire object storage; metadata stays in PostgreSQL. Seed accounts use the known dev password and must be changed before real use. Local Docker smoke containers `fleetgo-smoke2/3` were left running (remove with `docker rm -f`). The previously generated `FleetGo.zip` is stale.
+
+### 2026-11-05 — Fix Railway build: commit missing backend storage module (by Claude)
+
+- Problem (reported by the Railway build): the backend build could not resolve `backend/src/utils/storage` (imported by 7 modules). Root cause confirmed: `backend/.gitignore` line 28 had an unanchored `storage/` rule that also matched `backend/src/utils/storage/`, so the module was never committed in the deployment push — the earlier local `docker build` passed only because the files exist on disk locally.
+- Fix: anchored the dev-upload ignore rules to `/storage/` and `/uploads/` in `backend/.gitignore` (so they match only the backend-root upload dirs, not the src module), and committed the module (`index.ts`, `LocalStorageProvider.ts`, `StorageProvider.ts`). Swept `git status --ignored` to confirm no OTHER source files were wrongly ignored — only `storage` was affected.
+- Verification: exported the pushed `HEAD` via `git archive` (tracked files only, i.e. exactly what Railway clones) and ran `docker build` on it — build exit 0, including the backend `tsc` compile that imports storage and the frontend Vite build. Pushed to `main` (9cf48a3..b2a4282).
+- Note: the Railway agent also opened draft PR #1 with just the .gitignore anchor; this direct push to main supersedes it (PR can be closed). After Railway redeploys from main, generate the public domain and run the one-time `cd backend && npm run setup:all`.
+
+### 2026-11-06 — Fix live login on Railway: auto-seed on boot (by Claude)
+
+- Symptom: live site (https://jsanfleetgo-production.up.railway.app) healthy with DB connected, but every login returned 401. Probed live: health ok, `POST /auth/login` for the seed admin = 401.
+- Diagnosis: migrations had run (tables exist) but the database was never seeded, so no user accounts existed. Confirmed the Prisma seed is idempotent (upserts; the user upsert's `update` clause does NOT set passwordHash, so re-seeding never resets passwords) and self-contained (seeds the full permission catalogue + role grants from rbac.ts), so it is safe to run on every boot.
+- Fix: Dockerfile boot command now runs `prisma migrate deploy` (fatal) then `npm run db:seed` (non-fatal) then `node dist/server.js`; added `COPY backend/src ./src` to the runtime stage because the seed imports `../src/modules/auth/rbac`. Also changed `prisma.seed` in backend/package.json from `tsx prisma/seed.ts` to `npx tsx prisma/seed.ts` — a bare `tsx` spawned by `prisma db seed` was `ENOENT` on the container PATH (the reason the seed silently failed the first time).
+- Verified locally against a FRESH empty database (fleetgo_deploytest) built from the Docker image: boot applied all 13 migrations, seeded 42 permissions / 6 roles / 5 orgs / accounts, and `POST /auth/login` (superadmin@fleetgo.dev / FleetGo123) returned 200 with an access token. Pushed main (9289e47..c3ff4b1) to trigger the Railway redeploy.
+- Cleanup note: local throwaway Docker containers (fleetgo-smoke2/3, fleetgo-dt2/dt3) and the fleetgo_deploytest database remain on the dev machine; remove with `docker rm -f` and `DROP DATABASE` when convenient (sandbox blocked automated removal).
+
+### 2026-11-06 — Light theme by default (ignore OS dark) (by Claude)
+
+- Why it looked dark: the default theme preference is "system", and the frontend resolved "system" to dark when the OS was in dark mode (`prefers-color-scheme`). The freshly-seeded prod DB had the one user preference row at "system", so a dark OS showed the app dark.
+- Change (user wants light always, never auto-dark from OS): `AppConfigContext.applyToDocument` now resolves dark ONLY for an explicit `theme === 'dark'`; everything else (incl. "system"/default) → light. Removed the `prefersDark` helper and the OS `prefers-color-scheme` change listener. Backend `DEFAULT_PREFS.theme` and the `UserPreference.theme` schema default changed "system" → "light" so new users default to light. Dark stays available as an explicit opt-in in Settings.
+- Immediate prod fix (no redeploy needed): updated existing `user_preferences` rows via the public DB URL — `updateMany where theme != 'dark' set theme='light'` (1 row: system→light; verified before/after).
+- Verified: backend typecheck + frontend production build pass. Pushed main (c3ff4b1..c6c7944). The DB flip makes current accounts light now; the code change makes it permanent for new users and survives a rebuild (takes live effect once Railway redeploys the frontend).
+
+### 2026-11-10 — Insurance Claims module (by Claude)
+
+- New standalone module `/claims`: a vendor reports a vehicle incident (type, city, car, category, damage level LOW/MEDIUM/HIGH, description, police complaint + number) with photo & video evidence; a receiver acknowledges, sets the insurance status, records approved % and payable amount, and moves the claim Open → WIP → Closed.
+- Database (additive): `InsuranceClaim`, `ClaimAttachment`, `ClaimEvent` + enums (ClaimIncidentType, ClaimDamageLevel, ClaimStatus=OPEN/WIP/CLOSED, ClaimInsuranceStatus, ClaimAttachmentKind) + `Vehicle.insuranceClaims` back-relation. Migration `20261110090000_insurance_claims` applied to the LOCAL dev DB only.
+  - Note: `migrate deploy` first failed because the earlier phase4 migration RENAME (110000→100000, pulled from remote) left the local dev DB history mismatched; resolved with `prisma migrate resolve --applied 20261103100000_phase4_inventory` (bookkeeping only, no schema change). Prod was unaffected (seeded fresh with the new name).
+- Backend: `modules/claims` (validators/service/routes) mounted at `/api/v1/claims`; RBAC `claims:read` (all roles), `claims:report` (vendor/cts/ops/jsan/super), `claims:manage` (ops/jsan/super) added to rbac.ts; `enable-claims.ts` + `enable:all` updated; append-only ClaimEvent timeline; evidence reuses the media uploader (images+video+pdf, 100MB); reference `FG-CLM-000001` via Counter; vendor/CTS scoped to own org, admins/ops see all.
+- Frontend: `types/claim.ts`, `services/claimService.ts`, `modules/claims/pages/ClaimsPage.tsx` (list+dashboard, report form with photo/video pickers, detail with authenticated evidence gallery (img/video), insurance-processing panel with approved% + payable, and event timeline) + `Claims.css`; nav item (`alert` icon) + `/claims/*` route.
+- Verification: backend typecheck + `npm run test:claims` = 25/25 (report, photo+video evidence, acknowledge, insurer status, approved%/payable, Open/WIP/Closed, validation, vendor-cannot-process, cross-vendor scope isolation, dashboard). Frontend typecheck + production build pass.
+- NOT pushed (user asked to hold). Local dev DB migrated + `claims:enable` run; prod DB untouched. To deploy later: push, then on prod run migrate deploy + `npm run claims:enable` (or rely on boot migrate + add enable to setup).
+
+### 2026-11-10 - Show Insurance Claims in sidebar
+
+- Files changed: frontend/src/layouts/Sidebar/Sidebar.tsx and codex.md.
+- Cause: /claims existed in NAV_ITEMS and had a guarded route, but was absent from every sidebar group, so authorized vendor and other users could not see it.
+- Fix: Added /claims to the Operations group. Existing permission filtering and backend access rules remain unchanged.
+- Verification: Confirmed the claims navigation item uses claims:read and vendor RBAC includes claims:read and claims:report. Frontend production build result recorded below. No role/database changes, claims created, or deployment performed.
+
+- Build verification: frontend npm run build passed (TypeScript and Vite); chunk-size and mixed static/dynamic import advisories remain. Generated frontend/dist and TypeScript metadata refreshed.
+
+### 2026-11-10 - Fix claim evidence uploads and recover partial submissions
+
+- Files changed: frontend/src/services/apiClient.ts, frontend/src/modules/claims/pages/ClaimsPage.tsx and codex.md.
+- Root cause: the shared Axios client defaults to application/json, so FormData evidence posts were transformed into JSON and the multipart middleware received no file, returning A file is required.
+- Fix: remove Content-Type for FormData in the request interceptor so the browser supplies multipart/form-data with its boundary. JSON requests and authorization remain unchanged. This also corrects other browser file uploads using the same client.
+- Recovery: retain the created claim id while files upload. If an upload fails after creation, show an Open the existing claim link and disable another Submit report from the same form to avoid duplicate claims. Users can add missing evidence from the existing detail page.
+- Verification: local headless Edge regression with mocked API responses exercised the real vendor claim form, photo and video selection and submission. Verified multipart boundary, file field, filenames, raw file bytes and authorization; claim creation remains JSON. Simulated an upload failure and verified the existing-claim link and disabled duplicate submit. No live claims/files or database records created. Regression script retained at .tmp/claim-upload-review/check.cjs. Frontend npm run build passed (TypeScript/Vite); existing chunk-size and mixed-import advisories remain. Generated frontend/dist and TypeScript metadata refreshed. Not deployed.
+
+
+### 2026-11-10 - Open insurance claims by clicking table rows
+
+- Files changed: frontend/src/modules/claims/pages/ClaimsPage.tsx and codex.md.
+- Changes: Connected the claims table to its existing shared onRowClick behavior so clicking a non-interactive cell opens the claim detail page. Existing reference links remain usable. Shared DataTable provides a pointer cursor, focusable rows and Enter-key navigation, and avoids intercepting links/buttons. No claim processing or authorization logic changed.
+- Verification: Frontend typecheck result recorded in task response. Reviewed shared DataTable handling for row clicks, Enter key and nested interactive controls. No database records changed or deployment performed.
+
+
+### 2026-11-10 - Redesign Insurance Claims UI
+
+- Files changed: frontend/src/modules/claims/pages/ClaimsPage.tsx, frontend/src/modules/claims/Claims.css, frontend/src/components/AutomotiveBanner/AutomotiveBanner.tsx and codex.md.
+- Changes: Added five distinct summary cards, aligned search/filter/report controls, a claims register with vehicle icons, a row-navigation hint and explicit accessible View links. Organized the report form into Incident details, Police information and Supporting evidence sections, with clearer upload surfaces. Organized claim detail into a responsive two-column incident/evidence and processing layout, prominent acknowledgement area, larger uncropped evidence previews and a styled activity timeline. Added a claims-specific car-photo banner. Existing claim data, handlers, permissions, statuses, amounts and APIs remain unchanged.
+- Verification: Frontend typecheck and production build passed. Headless Edge checks with mocked admin API fixtures verified list/detail/report responsive layouts, desktop/mobile and dark-theme rendering without page overflow or browser errors; View opens claim details with acknowledgement available. Reviewed screenshots under .tmp/claim-upload-review. Re-ran the mocked vendor photo/video upload and partial-upload recovery regression; results recorded in task response. No database changes or deployment. Generated frontend/dist and TypeScript metadata refreshed; existing mixed-import and chunk-size advisories remain.
+
+
+### 2026-11-10 - Require complete insurance incident reports and evidence
+
+- Frontend files: frontend/src/modules/claims/pages/ClaimsPage.tsx and frontend/src/services/claimService.ts. All incident fields (vehicle, incident type, damage level, category, city, location, incident date, description of at least three characters) are mandatory and marked required. At least one photo and one video are mandatory. Submit stays disabled until complete and the handler checks again. Police complaint, FIR number and police station remain optional, including when the complaint checkbox is selected.
+- Backend files: backend/src/modules/claims/claims.validators.ts, claims.routes.ts and claims.service.ts; backend/src/middlewares/upload.ts and index.ts. Enforced required nonblank fields, valid enums/date and photo/video evidence. Added multipart report intake (up to 10 files, 100 MB combined; supported image/video MIME types only), correct multipart true/false parsing for policeComplaint, and one transaction for claim + evidence metadata. Files are staged first and removed on upload/database failure, so incomplete new reports are not saved. Existing records and additional-evidence endpoint remain unchanged; no migration needed.
+- API contract: POST /api/v1/claims now accepts report fields and repeated files multipart parts together; JSON-only creation without required evidence is rejected. Frontend uses the new complete-report request instead of creating a claim followed by separate uploads. Removed the now-obsolete partial-upload claim recovery state. Role and processing permissions are unchanged.
+- Tests: Added backend/scripts/test-claims-required.cjs and npm run test:claims:required (database/storage mocked); 35 assertions passed for missing/blank fields, optional police information, multipart parsing, missing image/video, unsupported media and storage/transaction failure cleanup. Updated backend/scripts/test-claims.cjs to submit complete multipart fixtures with an incident date and account for initial evidence; syntax checked but the live DB suite was not run. Mocked vendor browser regression at .tmp/claim-upload-review/check-required.cjs passed for disabled incomplete submit, mandatory photo/video, optional police and one multipart submission. No live claim/database/storage changes made by verification.
+- Verification: backend and frontend typechecks and production builds passed. Frontend mixed-import and chunk-size advisories remain. Generated backend/dist, frontend/dist and TypeScript metadata refreshed. Updated codex.md. Not deployed.
+
+
+### 2026-11-10 — Claims: final testing after user changes (by Claude)
+
+- User changed the claim-create flow to a SINGLE multipart request: the report now carries its photos+videos together (`files[]`, new `uploadClaimMedia()` middleware, up to 10 files / 100 MB). Create validators now REQUIRE category, city, location, incidentDate (and ≥1 photo + ≥1 video, enforced in the service); `policeComplaint` parsed safely from the "true"/"false" string. Frontend ReportForm sends everything in one `claimApi.create(body, photos, videos)` call and gates the submit button on all required fields + ≥1 photo + ≥1 video. List got row-click navigation, a "Details → View" column, and a redesigned metric/overview section + section-headed report form (user CSS).
+- Final testing/corrections (no behavioural changes by me): verified backend typecheck, frontend typecheck + production build all pass. Ran the suite — added 3 assertions for the new rule (photo-but-no-video → 400, video-but-no-photo → 400, missing required city → 422); `npm run test:claims` now 28/28. Also confirmed via curl that a complete multipart report returns 201 and the chevron-right icon + user CSS classes exist.
+- Still local only — not pushed (user asked to hold). Local dev DB has the claims migration + permissions; prod untouched.

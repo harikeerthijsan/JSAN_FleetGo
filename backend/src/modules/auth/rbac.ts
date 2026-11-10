@@ -66,6 +66,9 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'reports:read', category: 'reports', description: 'View reports' },
   { key: 'settings:manage', category: 'settings', description: 'Manage system settings' },
   { key: 'audit:read', category: 'audit', description: 'View audit logs' },
+  { key: 'claims:read', category: 'claims', description: 'View insurance claims' },
+  { key: 'claims:report', category: 'claims', description: 'Raise insurance claims and upload evidence' },
+  { key: 'claims:manage', category: 'claims', description: 'Receive, process and settle insurance claims' },
 ];
 
 export const ALL_PERMISSION_KEYS = PERMISSIONS.map((p) => p.key);
@@ -130,6 +133,9 @@ export const SYSTEM_ROLES: RoleDef[] = [
       'reports:read',
       'audit:read',
       'settings:manage',
+      'claims:read',
+      'claims:report',
+      'claims:manage',
     ],
   },
   {
@@ -159,6 +165,9 @@ export const SYSTEM_ROLES: RoleDef[] = [
       'disk:read',
       'disk:manage',
       'reports:read',
+      'claims:read',
+      'claims:report',
+      'claims:manage',
     ],
   },
   {
@@ -177,6 +186,8 @@ export const SYSTEM_ROLES: RoleDef[] = [
       'inspections:confirm',
       'disk:read',
       'reports:read',
+      'claims:read',
+      'claims:report',
     ],
   },
   {
@@ -197,6 +208,8 @@ export const SYSTEM_ROLES: RoleDef[] = [
       'disk:read',
       'vendors:read',
       'reports:read',
+      'claims:read',
+      'claims:report',
     ],
   },
   {

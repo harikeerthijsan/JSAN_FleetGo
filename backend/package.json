@@ -32,7 +32,10 @@
     "test:vendors": "node scripts/test-vendors.cjs",
     "settings:enable": "tsx scripts/enable-settings.ts",
     "test:settings": "node scripts/test-settings.cjs",
-    "enable:all": "tsx scripts/enable-inventory.ts && tsx scripts/enable-operations.ts && tsx scripts/enable-tracking.ts && tsx scripts/enable-inspections.ts && tsx scripts/enable-disk-logistics.ts && tsx scripts/enable-vendors.ts && tsx scripts/enable-settings.ts",
+    "claims:enable": "tsx scripts/enable-claims.ts",
+    "test:claims": "node scripts/test-claims.cjs",
+    "test:claims:required": "node --require tsx/cjs scripts/test-claims-required.cjs",
+    "enable:all": "tsx scripts/enable-inventory.ts && tsx scripts/enable-operations.ts && tsx scripts/enable-tracking.ts && tsx scripts/enable-inspections.ts && tsx scripts/enable-disk-logistics.ts && tsx scripts/enable-vendors.ts && tsx scripts/enable-settings.ts && tsx scripts/enable-claims.ts",
     "setup:all": "prisma migrate deploy && prisma db seed && npm run enable:all"
   },
   "prisma": {

@@ -100,3 +100,28 @@ export function uploadMediaSingle(field: string) {
     });
   };
 }
+
+/** A complete claim report carries its photos and videos in one request. */
+export function uploadClaimMedia() {
+  const handler = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MEDIA_MAX_SIZE, files: 10, fields: 20 },
+    fileFilter: (_req, file, cb) => {
+      if (ALLOWED_MEDIA_MIME.has(file.mimetype) && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'))) cb(null, true);
+      else cb(new ApiError(415, 'Claim evidence must be a supported photo or video'));
+    },
+  }).array('files', 10);
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (Number(req.headers['content-length'] ?? 0) > MEDIA_MAX_SIZE + 1_048_576) {
+      next(ApiError.badRequest('Claim evidence must total 100 MB or less'));
+      return;
+    }
+    handler(req, res, (err: unknown) => {
+      if (err instanceof MulterError) return next(ApiError.badRequest(err.code === 'LIMIT_FILE_SIZE' ? 'Each file must be 100 MB or less' : err.message));
+      if (err) return next(err);
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (files.reduce((total, file) => total + file.size, 0) > MEDIA_MAX_SIZE) return next(ApiError.badRequest('Claim evidence must total 100 MB or less'));
+      next();
+    });
+  };
+}

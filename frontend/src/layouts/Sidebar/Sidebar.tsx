@@ -25,7 +25,7 @@ export function Sidebar() {
 
   const comingSoon = new Set<string>([]);
   const groups = [
-    { label: 'Operations', paths: ['/dashboard', '/tickets', '/allocations', '/dispatch', '/tracking', '/inspections'] },
+    { label: 'Operations', paths: ['/dashboard', '/tickets', '/allocations', '/dispatch', '/tracking', '/inspections', '/claims'] },
     { label: 'Fleet & assets', paths: ['/fleet', '/inventory', '/vendors', '/disk-logistics'] },
     { label: 'Administration', paths: ['/master-data', '/users', '/reports', '/settings'] },
   ];
