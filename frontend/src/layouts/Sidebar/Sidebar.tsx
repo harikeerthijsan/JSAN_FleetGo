@@ -23,6 +23,7 @@ export function Sidebar() {
     return required.length === 0 || hasAnyPermission(required);
   });
 
+  const displayLabels: Record<string, string> = { '/inventory': 'Fleet Inventory', '/tickets': 'Requests & Approvals', '/dispatch': 'Allocation & Dispatch', '/vendors': 'Vendors & Partners' };
   const comingSoon = new Set<string>([]);
   const groups = [
     { label: 'Operations', paths: ['/dashboard', '/tickets', '/dispatch', '/tracking', '/inspections', '/claims'] },
@@ -47,13 +48,14 @@ export function Sidebar() {
       >
         <div className="fg-sidebar__brand">
           <span className="fg-sidebar__logo">
-            <Icon name="fleet" size={22} />
+            <svg width="38" height="38" viewBox="0 0 56 56" fill="currentColor" aria-hidden="true"><path d="M3 3h50v12H15v38H3zM33 27h20v26H27V41h14V27z" /></svg>
           </span>
           {!collapsed ? (
             <span className="fg-sidebar__brand-text">
-              {orgName === 'FleetGo' ? <>Fleet<span>Go</span></> : orgName}
+              {orgName === 'FleetGo' ? 'JSAN' : orgName}
             </span>
           ) : null}
+          {!collapsed ? <span className="fg-sidebar__tagline">PEOPLE | TECHNOLOGY | PLACES</span> : null}
         </div>
 
         <nav className="fg-sidebar__nav" aria-label="Main navigation">
@@ -64,7 +66,7 @@ export function Sidebar() {
               {!collapsed ? <p className="fg-sidebar__group-title">{group.label}</p> : null}
               {entries.map((item) => {
                 const label = <><span className="fg-sidebar__link-icon"><Icon name={item.icon} size={20} /></span>
-                  {!collapsed ? <span className="fg-sidebar__link-label">{item.label}</span> : null}</>;
+                  {!collapsed ? <span className="fg-sidebar__link-label">{displayLabels[item.path] ?? item.label}</span> : null}</>;
                 if (comingSoon.has(item.path)) return <span key={item.path} className="fg-sidebar__link fg-sidebar__link--unavailable" aria-disabled="true" title={`${item.label} ? Coming soon`}>
                   {label}{!collapsed ? <span className="fg-sidebar__soon">Soon</span> : null}
                 </span>;

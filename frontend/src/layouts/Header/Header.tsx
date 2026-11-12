@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Icon } from '@/components';
 import { useAuth } from '@/context/AuthContext';
 import { useSidebar } from '@/context/SidebarContext';
@@ -72,7 +72,8 @@ export function Header() {
         >
           <Icon name="menu" size={20} />
         </button>
-        <span className="fg-header__section">{current?.label ?? 'FleetGo'}</span>
+        <Link className="fg-header__wordmark" to="/dashboard" aria-label="FleetGo home">Fleet<span>Go</span></Link>
+        <div className="fg-header__identity"><span>Global Fleet Logistics Control Tower</span><span className="fg-header__section">{current?.label ?? 'FleetGo'}</span></div>
       </div>
 
       <div className="fg-header__right">
@@ -86,7 +87,7 @@ export function Header() {
             aria-expanded={menuOpen}
           >
             <span className="fg-header__avatar">
-              <Icon name="user-circle" size={28} />
+              {(user?.fullName ?? 'FleetGo User').split(' ').filter(Boolean).slice(0, 2).map((name) => name[0]).join('').toUpperCase()}
             </span>
             <span className="fg-header__user-meta">
               <span className="fg-header__user-name">

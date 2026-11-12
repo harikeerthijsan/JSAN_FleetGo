@@ -17,12 +17,12 @@
   padding: 10px 14px;
   white-space: nowrap;
   border-radius: 9px;
-  color: #526b60;
+  color: #4b6282;
   font-size: 14px;
 }
 .fg-inventory__tabs a.active {
-  background: #d9eee2;
-  color: #214d53;
+  background: #dceeff;
+  color: #0763b6;
   font-weight: 600;
 }
 .fg-inventory__heading {
@@ -46,7 +46,7 @@
 }
 .fg-inventory__metrics strong {
   font-size: 30px;
-  color: #285a60;
+  color: #087bd5;
 }
 .fg-inventory__charts {
   display: grid;
@@ -117,7 +117,7 @@
 }
 .fg-inventory__timeline {
   margin: 10px 0 10px 8px;
-  border-left: 2px solid #b4dfcb;
+  border-left: 2px solid #b8dcff;
   padding-left: 24px;
 }
 .fg-inventory__timeline li {
@@ -144,7 +144,7 @@
 .fg-inventory__timeline time,
 .fg-inventory__timeline p {
   font-size: 13px;
-  color: #526b60;
+  color: #4b6282;
 }
 .fg-inventory__recon-row {
   padding: 22px 0;
@@ -190,3 +190,14 @@
   .fg-inventory > .fg-pagetitle .fg-pagetitle__actions { width: 100%; }
   .fg-inventory__register { width: 100%; }
 }
+
+/* Keep search close to the records; reveal advanced controls when needed. */
+.fg-inventory__search { padding: 18px 20px 14px; max-width: 560px; }
+.fg-inventory__filter-details { border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+.fg-inventory__filter-details > summary { display: flex; align-items: center; gap: 9px; padding: 13px 20px; cursor: pointer; color: var(--text-primary); font-size: 13px; font-weight: 600; list-style: none; }
+.fg-inventory__filter-details > summary::-webkit-details-marker { display: none; }
+.fg-inventory__filter-details > summary::after { content: '+'; margin-left: auto; font-size: 18px; font-weight: 400; }
+.fg-inventory__filter-details[open] > summary::after { content: '−'; }
+.fg-inventory__filter-details > summary > span { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
+.fg-inventory__filter-details .fg-inventory__filters { margin-bottom: 0; padding-top: 4px; }
+@media (max-width:560px) { .fg-inventory__search { padding: 16px; } .fg-inventory__filter-details > summary { padding: 12px 16px; min-height: 44px; } .fg-inventory__filter-details .fg-inventory__filters { padding: 4px 16px 16px; gap: 14px; } }

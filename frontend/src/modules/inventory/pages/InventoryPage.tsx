@@ -522,13 +522,17 @@ function InventoryList() {
       </div>
       <Feedback error={error || lookups.error} />
       <Card flush>
-        <div className="fg-inventory__filters">
+        <div className="fg-inventory__search">
           <FormInput
             label="Search"
             placeholder="Vehicle ID, registration or VIN"
             value={filters.search}
             onChange={(e) => change("search", e.target.value)}
           />
+        </div>
+        <details className="fg-inventory__filter-details">
+          <summary><Icon name="filter" size={17} />Filters &amp; sorting<span>{Object.entries(filters).filter(([key, value]) => value && !['search', 'sortBy', 'sortDir'].includes(key)).length || 'All vehicles'}</span></summary>
+          <div className="fg-inventory__filters">
           {[
             ["depotId", "Depot", lookups.data?.depots],
             [
@@ -640,6 +644,7 @@ function InventoryList() {
             Clear filters
           </Button>
         </div>
+        </details>
         {error ? (
           <Button variant="secondary" onClick={load}>
             Retry

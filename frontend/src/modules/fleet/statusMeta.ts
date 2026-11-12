@@ -24,7 +24,7 @@ export function statusLabel(status: VehicleStatus): string {
 
 /** Stable colors independent of ordering and omitted zero-count statuses. */
 export const STATUS_COLORS: Record<VehicleStatus, string> = {
-  AT_VENDOR: '#7b7199', REGISTERED: '#738579', RECEIVED: '#62999e', AVAILABLE: '#30835e', RESERVED: '#b68730',
-  ALLOCATED: '#285a60', DISPATCHED: '#557d89', IN_TRANSIT: '#477fa0', DELIVERED: '#537d44',
+  AT_VENDOR: '#805bd3', REGISTERED: '#738579', RECEIVED: '#62999e', AVAILABLE: '#30835e', RESERVED: '#b68730',
+  ALLOCATED: '#087bd5', DISPATCHED: '#557d89', IN_TRANSIT: '#08a8e8', DELIVERED: '#537d44',
   UNDER_MAINTENANCE: '#ae771c', DAMAGED: '#b34444', RETURNED: '#9189af', INACTIVE: '#747b81',
 };

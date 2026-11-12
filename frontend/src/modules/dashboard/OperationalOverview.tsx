@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BarChart, Card, DonutChart, Spinner } from "@/components";
+import { BarChart, Card, DonutChart, Icon, Spinner, type IconName } from "@/components";
 import { reportsApi } from "@/services/reportsService";
 import type {
   DashboardCharts,
@@ -9,7 +9,7 @@ import type {
 } from "@/types/reports";
 import "./OperationalOverview.css";
 
-const PALETTE = ["#285a60", "#58a58c", "#d7af67", "#91aaa5", "#9189af", "#b27670", "#c98a3a"];
+const PALETTE = ["#0672d9", "#08a8e8", "#8a64d6", "#56a5d8", "#7065ca", "#e47785", "#e6a33a"];
 const withColor = (points: { label: string; count: number }[]) =>
   points.filter((p) => p.count > 0).map((p, i) => ({ ...p, color: PALETTE[i % PALETTE.length] }));
 
@@ -66,14 +66,16 @@ export function OperationalOverview() {
     { label: "Delayed trips", value: summary.delayedTrips, to: "/dispatch" },
     { label: "Completed deliveries", value: summary.completedDeliveries, to: "/reports/dispatch" },
   ];
+  const cardIcons: IconName[] = ['fleet', 'inventory', 'calendar', 'fleet', 'dispatch', 'vendors', 'settings', 'alert', 'tickets', 'inspections', 'tracking', 'inspections'];
 
   return (
     <section className="fg-ov" aria-label="Operational overview">
       <div className="fg-ov__section-label"><span>OPERATIONAL OVERVIEW</span></div>
       <div className="fg-ov__cards">
-        {cards.map((c) => (
+        {cards.map((c, index) => (
           <Link key={c.label} to={c.to} className="fg-ov__card">
-            <span className="fg-ov__value">{c.value}</span>
+            <span className="fg-ov__icon" aria-hidden="true"><Icon name={cardIcons[index]} size={27} /></span>
+            <span className="fg-ov__value">{c.value.toLocaleString()}</span>
             <span className="fg-ov__label">{c.label}</span>
           </Link>
         ))}

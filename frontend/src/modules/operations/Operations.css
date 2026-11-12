@@ -13,13 +13,13 @@
 .fg-ops__tabs a {
   white-space: nowrap;
   padding: 10px 14px;
-  color: #526b60;
+  color: #4b6282;
   border-radius: 9px;
   font-size: 14px;
 }
 .fg-ops__tabs a.active {
-  background: #d9eee2;
-  color: #214d53;
+  background: #dceeff;
+  color: #0763b6;
   font-weight: 600;
 }
 .fg-ops__heading,
@@ -46,7 +46,7 @@
 }
 .fg-ops__metrics strong {
   font-size: 30px;
-  color: #285a60;
+  color: #087bd5;
 }
 .fg-ops__form {
   display: grid;
@@ -77,7 +77,7 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  accent-color: #285a60;
+  accent-color: #087bd5;
 }
 .fg-ops__facts > div {
   display: grid;
@@ -93,7 +93,7 @@
   overflow-wrap: anywhere;
 }
 .fg-ops__timeline {
-  border-left: 2px solid #b4dfcb;
+  border-left: 2px solid #b8dcff;
   padding-left: 22px;
   margin: 20px 0;
 }

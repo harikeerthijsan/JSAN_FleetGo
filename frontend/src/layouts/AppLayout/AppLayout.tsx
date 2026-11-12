@@ -19,7 +19,7 @@ function Shell() {
       <div className="fg-shell__main">
         <Header />
         <main key={pathname} className="fg-shell__content">
-          <AutomotiveBanner />
+          {pathname !== '/dashboard' ? <AutomotiveBanner /> : null}
           <Outlet />
         </main>
       </div>

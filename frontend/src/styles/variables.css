@@ -1,34 +1,34 @@
 /* ==========================================================================
    FleetGo Design Tokens
    Single source of truth for colors, typography, spacing, radius and shadows.
-   Premium navy-and-mint enterprise theme.
+   Blue-and-white fleet operations theme.
    ========================================================================== */
 
 :root {
   /* ---- Brand / Primary (blue) ---- */
-  --color-primary-50: #edf5ef;
-  --color-primary-100: #d9eee2;
-  --color-primary-200: #b4dfcb;
-  --color-primary-300: #8fc9b0;
-  --color-primary-400: #609d85;
-  --color-primary-500: #285a60;
-  --color-primary-600: #214d53;
-  --color-primary-700: #1a4248;
-  --color-primary-800: #14363e;
-  --color-primary-900: #102b33;
+  --color-primary-50: #eef6ff;
+  --color-primary-100: #dceeff;
+  --color-primary-200: #b8dcff;
+  --color-primary-300: #8dc9fa;
+  --color-primary-400: #409ee8;
+  --color-primary-500: #087bd5;
+  --color-primary-600: #0763b6;
+  --color-primary-700: #084e92;
+  --color-primary-800: #103e76;
+  --color-primary-900: #103568;
 
   /* ---- Neutrals ---- */
   --color-white: #ffffff;
-  --color-gray-50: #f4f6f2;
-  --color-gray-100: #edf1eb;
-  --color-gray-200: #e1e8e3;
-  --color-gray-300: #cdd9d1;
-  --color-gray-400: #98aaa0;
-  --color-gray-500: #738579;
-  --color-gray-600: #526b60;
-  --color-gray-700: #3d594e;
-  --color-gray-800: #29463d;
-  --color-gray-900: #19373d;
+  --color-gray-50: #f4f8fd;
+  --color-gray-100: #edf4fc;
+  --color-gray-200: #dce8f6;
+  --color-gray-300: #c4d5e9;
+  --color-gray-400: #8b9fba;
+  --color-gray-500: #627795;
+  --color-gray-600: #4b6282;
+  --color-gray-700: #334d70;
+  --color-gray-800: #223d62;
+  --color-gray-900: #102e56;
 
   /* ---- Semantic / Status ---- */
   --color-success: #15a862;
@@ -37,10 +37,10 @@
   --color-warning-bg: #fdf3e2;
   --color-danger: #d64545;
   --color-danger-bg: #fdeaea;
-  --color-info: #285a60;
-  --color-info-bg: #edf5ef;
-  --color-neutral: #738579;
-  --color-neutral-bg: #edf1eb;
+  --color-info: #087bd5;
+  --color-info-bg: #eef6ff;
+  --color-neutral: #627795;
+  --color-neutral-bg: #edf4fc;
 
   /* ---- Surfaces ---- */
   --surface-page: var(--color-gray-50);

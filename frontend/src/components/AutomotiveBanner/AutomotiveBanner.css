@@ -38,3 +38,15 @@
  .fg-auto-banner__car { left: 20px; }
 }
 @media print { .fg-auto-banner { display: none; } }
+
+/* Match module photography to the blue-and-white workspace. */
+.fg-auto-banner { background: #d9ecff; border-color: #d5e6fa; border-radius: 14px; box-shadow: 0 3px 12px #164e8b09; }
+.fg-auto-banner::before { background: linear-gradient(90deg,#eaf5ff 3%,#eaf5fff0 29%,#eaf5ff85 54%,#eaf5ff08); }
+.fg-auto-banner h2 { color: #103568; font-weight: 700; }
+.fg-auto-banner h2 em { color: #087bd5; }
+.fg-auto-banner__eyebrow { color: #285b8f; }
+.fg-auto-banner__eyebrow > span { background: #087bd5; box-shadow: 0 0 8px #087bd530; }
+.fg-auto-banner__description { color: #355b86; }
+.fg-auto-banner__car { color: #087bd5; }
+.fg-auto-banner__road { background: repeating-linear-gradient(90deg,#087bd52b 0 32px,transparent 32px 54px); }
+@media (max-width:700px) { .fg-auto-banner::before { background: linear-gradient(90deg,#eaf5fff5,#eaf5ffcc 55%,#eaf5ff38); } }

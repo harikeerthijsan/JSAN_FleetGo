@@ -22,14 +22,14 @@
 .fg-map__tools button {
   border: 1px solid #cdd9d1;
   background: #f6faf5;
-  color: #285a60;
+  color: #087bd5;
   padding: 9px 12px;
   border-radius: 8px;
 }
 .fg-map__tools span,
 .fg-map__caption {
   font-size: 12px;
-  color: #526b60;
+  color: #4b6282;
 }
 .fg-map__caption {
   padding: 12px 16px;
@@ -65,7 +65,7 @@
   color: #fff;
   box-shadow: 0 2px 10px #14363e45;
   font-size: 20px;
-  background: #285a60;
+  background: #087bd5;
 }
 .fg-gps-dot--moving {
   background: #258159;

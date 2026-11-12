@@ -22,6 +22,7 @@ import type { FleetStats, VehicleStatus } from '@/types/vehicle';
 import { statusLabel, STATUS_COLORS } from '@/modules/fleet/statusMeta';
 import { OperationalOverview } from '@/modules/dashboard/OperationalOverview';
 import { CarPhotoCollection } from '@/components/CarPhotoCollection/CarPhotoCollection';
+import sunsetDrive from '@/assets/cars/sunset-drive.jpg';
 import './DashboardPage.css';
 
 function appTone(status?: HealthCheck['status']): BadgeTone {
@@ -74,13 +75,27 @@ export function DashboardPage() {
       ]
     : [];
 
-  const chartColors = ['#285a60', '#58a58c', '#d7af67', '#91aaa5', '#9189af', '#b27670'];
+  const chartColors = ['#0672d9', '#08a8e8', '#8a64d6', '#56a5d8', '#7065ca', '#e47785'];
   const statusChart: ChartDatum[] = stats
     ? stats.byStatus.filter((s) => s.count > 0).map((s) => ({ label: statusLabel(s.status), count: s.count, color: STATUS_COLORS[s.status] }))
     : [];
 
   return (
     <div className="fg-dash">
+      <section className="fg-dash__banner" aria-label="FleetGo vehicle logistics">
+        <img src={sunsetDrive} alt="" aria-hidden="true" className="fg-dash__banner-photo" fetchPriority="high" />
+        <div className="fg-dash__banner-copy">
+          <span className="fg-dash__banner-eyebrow">GLOBAL FLEET OPERATIONS</span>
+          <h1>End-to-End<br />Vehicle Logistics</h1>
+          <p>Inventory | Movement | Tracking | Handover | Claims</p>
+        </div>
+        <ul className="fg-dash__banner-benefits">
+          <li><Icon name="tracking" size={23} /><div><strong>Full Fleet Visibility</strong><span>Location, status and custody</span></div></li>
+          <li><Icon name="dispatch" size={23} /><div><strong>Connected Operations</strong><span>From request to handover</span></div></li>
+          <li><Icon name="inspections" size={23} /><div><strong>Controlled &amp; Auditable</strong><span>Inspections, inventory and claims</span></div></li>
+        </ul>
+        <div className="fg-auto-banner__road" aria-hidden="true"><span className="fg-auto-banner__car"><svg viewBox="0 0 72 30" fill="none"><path d="m7 18 5-9 12-2 12-5h15l10 11 7 3v8H5v-6h2Z" fill="currentColor" /><path d="m29 7-6 7h29l-6-7H29Z" fill="#103568" /><circle cx="19" cy="24" r="5" fill="#103568" stroke="currentColor" strokeWidth="2" /><circle cx="55" cy="24" r="5" fill="#103568" stroke="currentColor" strokeWidth="2" /></svg></span></div>
+      </section>
       <PageTitle
         title="Operations overview"
         description="A clear view of your fleet. A confident start to your day."
@@ -92,22 +107,32 @@ export function DashboardPage() {
         }
       />
 
-      <OperationalOverview />
+      <nav className="fg-dash__quick-actions" aria-label="Quick actions">
+        {hasPermission('tickets:create') ? <Link to="/tickets/new"><Icon name="tickets" size={18} />Create request</Link> : hasPermission('tickets:read') ? <Link to="/tickets"><Icon name="tickets" size={18} />Requests &amp; approvals</Link> : null}
+        {hasPermission('inventory:read') ? <Link to="/inventory/vehicles"><Icon name="inventory" size={18} />View inventory</Link> : null}
+        {hasPermission('allocation:manage') || hasPermission('dispatch:read') ? <Link to="/dispatch"><Icon name="dispatch" size={18} />Allocation &amp; trips</Link> : null}
+        {hasPermission('tracking:read') ? <Link to="/tracking"><Icon name="tracking" size={18} />Track vehicles</Link> : null}
+        <Link to="/profile"><Icon name="user-circle" size={18} />My profile</Link>
+      </nav>
 
       <div className="fg-dash__section-label"><span>{canFleet ? 'FLEET AT A GLANCE' : 'YOUR WORKSPACE'}</span>
-        <span role="status">{statsLoading ? 'Updating fleet?' : canFleet && updatedAt ? `Fleet updated ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Welcome to FleetGo'}</span>
+        <span role="status">{statsLoading ? 'Updating fleet...' : canFleet && updatedAt ? `Fleet updated ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Welcome to FleetGo'}</span>
       </div>
       {statsError ? <div role="alert"><ErrorState title="Fleet summary could not be refreshed" description={`${statsError}${stats ? ' Showing the last successful snapshot.' : ''}`}
         action={<Button variant="secondary" onClick={loadStats} loading={statsLoading}>Retry fleet summary</Button>} /></div> : null}
       {canFleet && stats && stats.total > 0 ? <section className="fg-dash__attention" aria-label="Fleet attention summary">
         <Icon name="alert" size={22} />
-        <div><h2>What needs attention</h2><p>{countFor(stats, 'UNDER_MAINTENANCE')} under maintenance ? {countFor(stats, 'DAMAGED')} damaged ? {countFor(stats, 'AVAILABLE')} available for allocation</p></div>
+        <div><h2>What needs attention</h2><p>{countFor(stats, 'UNDER_MAINTENANCE')} under maintenance | {countFor(stats, 'DAMAGED')} damaged | {countFor(stats, 'AVAILABLE')} available for allocation</p></div>
         <Link to="/inventory/vehicles">Review vehicles <Icon name="chevron-right" size={16} /></Link>
       </section> : null}
       {canFleet && stats && stats.total === 0 ? <Card title="Start building your fleet" subtitle="Your operational summary will appear as vehicles are registered.">
         {hasPermission('fleet:manage') ? <Link to="/inventory/vehicles/new">Register your first vehicle</Link> : <p>Contact your fleet administrator to register vehicles.</p>}
       </Card> : null}
 
+      <OperationalOverview />
+
+      <details className="fg-dash__fleet-details">
+        <summary>Detailed fleet breakdown<span>Registration totals, vehicle status and type</span><Icon name="chevron-down" size={18} /></summary>
       {/* Fleet summary (real data) */}
       {canFleet ? (
         statsLoading && !stats ? (
@@ -142,6 +167,8 @@ export function DashboardPage() {
           </>
         ) : null
       ) : null}
+
+      </details>
 
       <div className="fg-dash__columns">
         <details className="fg-dash__diagnostics">
@@ -179,7 +206,7 @@ export function DashboardPage() {
           </ul>
         </Card>
       </div>
-      <CarPhotoCollection />
+      <details className="fg-dash__photo-details"><summary>Explore the FleetGo photo collection</summary><CarPhotoCollection /></details>
     </div>
   );
 }

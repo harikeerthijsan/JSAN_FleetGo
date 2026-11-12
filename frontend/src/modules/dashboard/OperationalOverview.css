@@ -32,14 +32,14 @@
 }
 
 .fg-ov__card:hover {
-  border-color: var(--fg-primary, #285a60);
+  border-color: var(--fg-primary, #087bd5);
   transform: translateY(-1px);
 }
 
 .fg-ov__value {
   font-size: 1.7rem;
   font-weight: 700;
-  color: var(--fg-primary, #285a60);
+  color: var(--fg-primary, #087bd5);
 }
 
 .fg-ov__label {
@@ -68,7 +68,7 @@
 }
 
 .fg-ov__badge {
-  background: var(--fg-primary, #285a60);
+  background: var(--fg-primary, #087bd5);
   color: #fff;
   border-radius: 999px;
   padding: 0 0.5rem;
