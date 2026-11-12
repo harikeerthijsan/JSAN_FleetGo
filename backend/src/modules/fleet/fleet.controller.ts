@@ -40,7 +40,7 @@ export const fleetController = {
       metadata: { vehicleCode: vehicle.vehicleCode, registrationNumber: vehicle.registrationNumber },
       ...requestContext(req),
     });
-    ApiResponse.success(res, vehicle, 'Vehicle registered', 201);
+    ApiResponse.success(res, vehicle, 'Vehicle registered and added to inventory', 201);
   }),
 
   update: asyncHandler(async (req: Request, res: Response) => {

@@ -136,3 +136,12 @@
     gap: 4px;
   }
 }
+.fg-ops__allocation-review { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 20px; padding: 20px 0; border-top: 1px solid var(--border-color); }
+.fg-ops__allocation-review strong { color: var(--text-primary); font-size: 14px; }
+.fg-ops__allocation-review p { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+@media (max-width: 560px) { .fg-ops__allocation-review { align-items: stretch; flex-direction: column; } .fg-ops__allocation-review .fg-btn { width: 100%; } }
+.fg-ops__workflow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 14px 18px; border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-secondary); background: var(--surface-card); font-size: 12px; line-height: 1.7; }
+.fg-ops__workflow span { color: #649a88; }
+.fg-ops { min-width: 0; }
+.fg-ops__tabs { min-width: 0; max-width: 100%; }
+@media (min-width: 701px) { .fg-ops__tabs { flex-wrap: wrap; overflow-x: visible; } }

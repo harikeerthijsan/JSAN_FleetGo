@@ -129,7 +129,7 @@ click, and the quote is the one line to say.
 3. Click a row in the monitoring grid to jump to the record.
 4. *"Every number is scoped to your role and links back to its source."*
 
-### 3. Fleet Management  (`/fleet`)
+### 3. Vehicle registration and details  (`/inventory/vehicles`)
 1. Open the vehicle list; filter by status.
 2. Open one vehicle → show status lifecycle + documents.
 3. *"Vehicle status is the authoritative state everything downstream respects."*
@@ -149,12 +149,12 @@ click, and the quote is the one line to say.
 2. Open the approval inbox → approve through the chain.
 3. *"Configurable workflow per ticket type; self-approval blocked; decisions locked."*
 
-### 7. Allocation  (`/allocations`)
+### 7. Allocation stage in Allocation Dispatch and Trips  (`/dispatch/requests`)
 1. Open the approved ticket → allocate vehicles from verified inventory.
 2. Show requested/allocated/pending quantities update.
 3. *"Each vehicle locks as it's committed — never double-allocated."*
 
-### 8. Dispatch & Trips  (`/dispatch`)
+### 8. Dispatch and trip stage in the same workspace  (`/dispatch`)
 1. Build a dispatch → assign transporter/driver.
 2. Complete the checklist + photos → confirm departure.
 3. Open the trip timeline → (as `driver@fleetgo.dev`) mark delivered.

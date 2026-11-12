@@ -19,8 +19,6 @@ interface Tile {
 const TILES: Tile[] = [
   { resource: 'makes', label: 'Makes', icon: 'fleet', to: '/master-data/makes-models' },
   { resource: 'models', label: 'Models', icon: 'fleet', to: '/master-data/makes-models' },
-  { resource: 'types', label: 'Types', icon: 'inventory', to: '/master-data/types-categories' },
-  { resource: 'categories', label: 'Categories', icon: 'inventory', to: '/master-data/types-categories' },
   { resource: 'fuel-types', label: 'Fuel Types', icon: 'dispatch', to: '/master-data/lookups' },
   { resource: 'ownership-types', label: 'Ownership Types', icon: 'tickets', to: '/master-data/lookups' },
   { resource: 'document-types', label: 'Document Types', icon: 'tickets', to: '/master-data/lookups' },

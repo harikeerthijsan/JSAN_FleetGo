@@ -4,7 +4,6 @@ import './MasterDataTabs.css';
 const TABS = [
   { to: '/master-data', label: 'Overview', end: true },
   { to: '/master-data/makes-models', label: 'Makes & Models', end: false },
-  { to: '/master-data/types-categories', label: 'Types & Categories', end: false },
   { to: '/master-data/depots', label: 'Depots', end: false },
   { to: '/master-data/vendors', label: 'Vendors & Partners', end: false },
   { to: '/master-data/lookups', label: 'Lookups', end: false },

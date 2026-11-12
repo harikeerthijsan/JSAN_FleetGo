@@ -17,3 +17,8 @@
   gap: var(--space-3);
   margin-top: var(--space-6);
 }
+.fg-vehicle-media { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px dashed var(--border-color); border-radius: 12px; background: var(--color-gray-50); min-width: 0; color: var(--text-primary); }
+.fg-vehicle-media > span { font-size: 13px; font-weight: 600; }
+.fg-vehicle-media input { max-width: 100%; color: var(--text-secondary); font-size: 12px; }
+.fg-vehicle-media input::file-selector-button { border: 1px solid var(--border-color); border-radius: 7px; padding: 8px 12px; margin-right: 10px; background: var(--surface-card); color: var(--text-primary); cursor: pointer; }
+.fg-vehicle-media small { color: var(--text-secondary); }

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { AppLayout } from '@/layouts/AppLayout/AppLayout';
 import { ChangePasswordPage } from '@/modules/auth/pages/ChangePasswordPage';
 import { ForgotPasswordPage } from '@/modules/auth/pages/ForgotPasswordPage';
@@ -8,15 +8,9 @@ import { ResetPasswordPage } from '@/modules/auth/pages/ResetPasswordPage';
 import { DashboardPage } from '@/modules/dashboard/pages/DashboardPage';
 import { DiskLogisticsPage } from '@/modules/disk-logistics/pages/DiskLogisticsPage';
 import {lazy,Suspense} from 'react';
-const AllocationsPage=lazy(()=>import('@/modules/operations/OperationsPages').then(m=>({default:m.AllocationsPage})));
 const OperationsDispatchPage=lazy(()=>import('@/modules/operations/OperationsPages').then(m=>({default:m.OperationsDispatchPage})));
-import { FleetOverviewPage } from '@/modules/fleet/pages/FleetOverviewPage';
-import { VehicleListPage } from '@/modules/fleet/pages/VehicleListPage';
-import { VehicleFormPage } from '@/modules/fleet/pages/VehicleFormPage';
-import { VehicleDetailsPage } from '@/modules/fleet/pages/VehicleDetailsPage';
 import { MasterDataDashboardPage } from '@/modules/masterdata/pages/MasterDataDashboardPage';
 import { MakesModelsPage } from '@/modules/masterdata/pages/MakesModelsPage';
-import { TypesCategoriesPage } from '@/modules/masterdata/pages/TypesCategoriesPage';
 import { DepotsPage } from '@/modules/masterdata/pages/DepotsPage';
 import { VendorsMasterPage } from '@/modules/masterdata/pages/VendorsMasterPage';
 import { LookupsPage } from '@/modules/masterdata/pages/LookupsPage';
@@ -33,6 +27,19 @@ import { SettingsPage } from '@/modules/settings/pages/SettingsPage';
 import { ClaimsPage } from '@/modules/claims/pages/ClaimsPage';
 import { NotFoundPage } from '@/pages/NotFound/NotFoundPage';
 import { ProtectedRoute, RequirePermission } from './guards';
+
+function LegacyVehicleRedirect({ edit = false }: { edit?: boolean }) {
+  const { id } = useParams();
+  const { search } = useLocation();
+  return <Navigate to={`/inventory/vehicles${id ? `/${id}${edit ? '/edit' : ''}` : ''}${search}`} replace />;
+}
+
+function LegacyAllocationRedirect() {
+  const { pathname, search } = useLocation();
+  const suffix = pathname.replace(/^\/allocations\/?/, '');
+  const target = !suffix ? '/dispatch' : suffix === 'queue' ? '/dispatch/requests' : suffix === 'list' ? '/dispatch/allocations' : suffix === 'reports' ? '/dispatch/reports' : `/dispatch/allocations/${suffix}`;
+  return <Navigate to={`${target}${search}`} replace />;
+}
 
 /**
  * Application routes.
@@ -64,46 +71,12 @@ export function AppRoutes() {
               </RequirePermission>
             }
           />
-          <Route
-            path="/fleet"
-            element={
-              <RequirePermission anyOf={['fleet:read']}>
-                <FleetOverviewPage />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/fleet/vehicles"
-            element={
-              <RequirePermission anyOf={['fleet:read']}>
-                <VehicleListPage />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/fleet/vehicles/new"
-            element={
-              <RequirePermission anyOf={['fleet:manage']}>
-                <VehicleFormPage />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/fleet/vehicles/:id"
-            element={
-              <RequirePermission anyOf={['fleet:read']}>
-                <VehicleDetailsPage />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/fleet/vehicles/:id/edit"
-            element={
-              <RequirePermission anyOf={['fleet:manage']}>
-                <VehicleFormPage />
-              </RequirePermission>
-            }
-          />
+          {/* Keep saved vehicle links working after consolidating navigation. */}
+          <Route path="/fleet" element={<Navigate to="/inventory" replace />} />
+          <Route path="/fleet/vehicles" element={<LegacyVehicleRedirect />} />
+          <Route path="/fleet/vehicles/new" element={<Navigate to="/inventory/vehicles/new" replace />} />
+          <Route path="/fleet/vehicles/:id" element={<LegacyVehicleRedirect />} />
+          <Route path="/fleet/vehicles/:id/edit" element={<LegacyVehicleRedirect edit />} />
 
           {/* Master Data */}
           <Route
@@ -119,14 +92,6 @@ export function AppRoutes() {
             element={
               <RequirePermission anyOf={['masterdata:read']}>
                 <MakesModelsPage />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/master-data/types-categories"
-            element={
-              <RequirePermission anyOf={['masterdata:read']}>
-                <TypesCategoriesPage />
               </RequirePermission>
             }
           />
@@ -170,11 +135,11 @@ export function AppRoutes() {
               </RequirePermission>
             }
           />
-          <Route path="/allocations/*" element={<RequirePermission anyOf={['allocation:manage','dispatch:read']}><Suspense fallback={<p role="status">Loading operations?</p>}><AllocationsPage /></Suspense></RequirePermission>} />
+          <Route path="/allocations/*" element={<LegacyAllocationRedirect />} />
           <Route
             path="/dispatch/*"
             element={
-              <RequirePermission anyOf={['dispatch:read']}>
+              <RequirePermission anyOf={['allocation:manage', 'dispatch:read']}>
                 <Suspense fallback={<p role="status">Loading operations?</p>}><OperationsDispatchPage /></Suspense>
               </RequirePermission>
             }

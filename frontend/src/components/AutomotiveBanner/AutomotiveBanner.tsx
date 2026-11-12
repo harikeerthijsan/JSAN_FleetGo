@@ -13,7 +13,7 @@ const scenes: Record<string, { image: string; title: string; caption: string }> 
   inventory: { image: garden, title: 'Every car, in the right place.', caption: 'Inventory management' },
   tickets: { image: coast, title: 'The next journey starts here.', caption: 'Requests and approvals' },
   allocations: { image: highland, title: 'The right car for the road ahead.', caption: 'Vehicle allocation' },
-  dispatch: { image: country, title: 'Ready for the road ahead.', caption: 'Dispatch and trips' },
+  dispatch: { image: country, title: 'Ready for the road ahead.', caption: 'Allocation, dispatch and trips' },
   tracking: { image: coast, title: 'A clearer view of the journey.', caption: 'Live tracking' },
   inspections: { image: lakeside, title: 'Confidence in every handover.', caption: 'Inspections and handover' },
   vendors: { image: garden, title: 'Great journeys take great partners.', caption: 'Vendor management' },

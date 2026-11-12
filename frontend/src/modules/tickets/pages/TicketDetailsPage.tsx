@@ -178,7 +178,7 @@ export function TicketDetailsPage() {
       {ticket.approvalStatus === 'APPROVED' && ticket.allocationSummary ? (
         <Card title="Vehicle fulfillment">
           <p>Requested: {ticket.allocationSummary.requested} ? Allocated: {ticket.allocationSummary.allocated} ? Pending: {ticket.allocationSummary.pending}</p>
-          {hasPermission('allocation:manage') && ticket.allocationSummary.pending > 0 && ['APPROVED','IN_PROGRESS','ON_HOLD'].includes(ticket.status) ? <Link className="fg-btn fg-btn--primary fg-btn--md" to={`/allocations/new?ticketId=${id}`}>Allocate vehicles</Link> : null}
+          {hasPermission('allocation:manage') && ticket.allocationSummary.pending > 0 && ['APPROVED','IN_PROGRESS','ON_HOLD'].includes(ticket.status) ? <Link className="fg-btn fg-btn--primary fg-btn--md" to={`/dispatch/allocations/new?ticketId=${id}`}>Allocate vehicles</Link> : null}
         </Card>
       ) : null}
 

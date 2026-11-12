@@ -3,12 +3,13 @@ import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
   type ReactNode,
 } from "react";
 import {
   Link,
   NavLink,
+  Navigate,
+  Outlet,
   Route,
   Routes,
   useNavigate,
@@ -24,6 +25,7 @@ import {
   DonutChart,
   ErrorState,
   FormInput,
+  Icon,
   PageTitle,
   Pagination,
   Select,
@@ -33,6 +35,9 @@ import {
   type ChartDatum,
 } from "@/components";
 import { useAuth } from "@/context/AuthContext";
+import { RequirePermission } from '@/routes/guards';
+import { VehicleFormPage } from '@/modules/fleet/pages/VehicleFormPage';
+import { VehicleDetailsPage } from '@/modules/fleet/pages/VehicleDetailsPage';
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { inventoryApi as api, downloadCsv } from "@/services/inventoryService";
@@ -180,11 +185,13 @@ const statusOptions = [
 export function InventoryPage() {
   useDocumentTitle("Inventory");
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   return (
     <div className="fg-inventory">
       <PageTitle
         title="Inventory management"
-        description="Receiving, availability, custody and reconciliation in one workspace."
+        description="Availability, custody, reservations and reconciliation. New vehicles enter inventory during registration."
+        actions={hasPermission('fleet:manage') && hasPermission('inventory:manage') ? <Button type="button" size="lg" className="fg-inventory__register" leftIcon={<Icon name="fleet" size={18} />} onClick={() => navigate('/inventory/vehicles/new')}>Register vehicle</Button> : undefined}
         breadcrumbs={[
           { label: "FleetGo", to: "/dashboard" },
           { label: "Inventory" },
@@ -200,7 +207,6 @@ export function InventoryPage() {
           ["reports", "Reports"],
           ...(hasPermission("inventory:manage")
             ? [
-                ["receive", "Receive vehicle"],
                 ["import", "Bulk import"],
                 ["transfer", "Transfer"],
               ]
@@ -218,15 +224,13 @@ export function InventoryPage() {
       <Routes>
         <Route index element={<Dashboard />} />
         <Route path="vehicles" element={<InventoryList />} />
-        <Route path="vehicles/:id" element={<Details />} />
-        <Route
-          path="receive"
-          element={
-            <Manage>
-              <Receipt />
-            </Manage>
-          }
-        />
+        <Route path="vehicles/new" element={<RequirePermission anyOf={['fleet:manage']}><RequirePermission anyOf={['inventory:manage']}><VehicleFormPage /></RequirePermission></RequirePermission>} />
+        <Route path="vehicles/:id" element={<VehicleWorkspace />}>
+          <Route index element={<RequirePermission anyOf={['fleet:read']}><VehicleDetailsPage /></RequirePermission>} />
+          <Route path="stock" element={<Details />} />
+          <Route path="edit" element={<RequirePermission anyOf={['fleet:manage']}><VehicleFormPage /></RequirePermission>} />
+        </Route>
+        <Route path="receive" element={<Navigate to="/inventory/vehicles/new" replace />} />
         <Route
           path="import"
           element={
@@ -338,7 +342,19 @@ function Dashboard() {
     </LoadBoundary>
   );
 }
+function VehicleWorkspace() {
+  const { id } = useParams();
+  return <>
+    <nav className="fg-inventory__tabs" aria-label="Vehicle sections">
+      <NavLink end to={`/inventory/vehicles/${id}`}>Vehicle details</NavLink>
+      <NavLink to={`/inventory/vehicles/${id}/stock`}>Stock &amp; custody</NavLink>
+    </nav>
+    <Outlet />
+  </>;
+}
+
 function InventoryList() {
+  const navigate = useNavigate();
   const [url] = useSearchParams();
   const lookups = useLookups();
   const [filters, setFilters] = useState<Record<string, string>>({
@@ -634,8 +650,9 @@ function InventoryList() {
           rows={rows}
           loading={loading}
           rowKey={(r) => r.id}
+          onRowClick={(row) => navigate(`/inventory/vehicles/${row.vehicleId}`)}
           emptyTitle="No matching inventory"
-          emptyDescription="Adjust filters, or record a vehicle receipt to add inventory."
+          emptyDescription="Adjust filters, or choose Register vehicle to add a car to inventory."
         />
         <Pagination
           page={page}
@@ -689,234 +706,6 @@ function CustodianFields({
         onChange={(e) => set("custodianId", e.target.value)}
       />
     </>
-  );
-}
-function Receipt() {
-  const lookup = useLookups();
-  const navigate = useNavigate();
-  const [data, setData] = useState<Record<string, string>>({
-    registrationNumber: "",
-    receivedAt: nowLocal(),
-    custodianType: "DEPOT",
-    custodianId: "",
-    initialCondition: "GOOD",
-  });
-  const [files, setFiles] = useState<File[]>([]);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState("");
-  const key = useRef(crypto.randomUUID());
-  const [dirty, setDirty] = useState(false);
-  const guard = useUnsavedChanges(dirty);
-  const set = (k: string, v: string) => {
-    setDirty(true);
-    key.current = crypto.randomUUID();
-    setData((f) => ({ ...f, [k]: v }));
-  };
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      const body = {
-        ...Object.fromEntries(Object.entries(data).filter(([, v]) => v !== "")),
-        receivedAt: toIso(data.receivedAt),
-      };
-      let id = saved;
-      if (!id) {
-        const out = await api.mutate<{ vehicleId: string }>(
-          "/receipts",
-          body,
-          "post",
-          key.current,
-        );
-        id = out.vehicleId;
-        setSaved(id);
-      }
-      for (let i = 0; i < files.length; i++)
-        await api.upload(
-          `/vehicles/${id}/evidence`,
-          files[i],
-          `${key.current}:file:${i}`,
-        );
-      setDirty(false);
-      guard.allowNavigation();
-      navigate(`/inventory/vehicles/${id}`);
-    } catch (e) {
-      setError(
-        message(e) +
-          (saved ? " Receipt is saved; retry the remaining uploads." : ""),
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <LoadBoundary {...lookup} retry={lookup.load}>
-      {lookup.data ? (
-        <Card
-          title="Register vehicle receipt"
-          subtitle="Use the registration number of an existing vehicle to receive it without duplicating its identity."
-        >
-          <Feedback error={error} />
-          {saved ? (
-            <p role="status">
-              Receipt saved. Complete evidence upload or{" "}
-              <Link to={`/inventory/vehicles/${saved}`}>
-                open the inventory profile
-              </Link>
-              .
-            </p>
-          ) : null}
-          <form onSubmit={submit}>
-            <fieldset disabled={busy || Boolean(saved)}>
-              <div className="fg-inventory__form-grid">
-                <FormInput
-                  label="Existing vehicle UUID (optional)"
-                  value={data.vehicleId ?? ""}
-                  onChange={(e) => set("vehicleId", e.target.value)}
-                  hint="Leave empty to match by registration number."
-                />
-                <FormInput
-                  label="Vehicle code (optional)"
-                  value={data.vehicleCode ?? ""}
-                  onChange={(e) => set("vehicleCode", e.target.value)}
-                  hint="Generated automatically for new vehicles when blank."
-                />
-                <FormInput
-                  label="Registration number"
-                  required
-                  value={data.registrationNumber}
-                  onChange={(e) => set("registrationNumber", e.target.value)}
-                />
-                <FormInput
-                  label="VIN / chassis"
-                  pattern="[A-HJ-NPR-Za-hj-npr-z0-9]{11,17}"
-                  value={data.vin ?? ""}
-                  onChange={(e) => set("vin", e.target.value)}
-                  hint="11–17 characters; excludes I, O, Q."
-                />
-                <Select
-                  label="Make"
-                  value={data.makeId ?? ""}
-                  options={options(lookup.data.makes)}
-                  onChange={(e) => {
-                    set("makeId", e.target.value);
-                    set("modelId", "");
-                  }}
-                />
-                <Select
-                  label="Model"
-                  value={data.modelId ?? ""}
-                  options={options(
-                    lookup.data.models.filter((m) => m.makeId === data.makeId),
-                  )}
-                  onChange={(e) => set("modelId", e.target.value)}
-                />
-                <Select
-                  label="Vehicle type"
-                  value={data.typeId ?? ""}
-                  options={options(lookup.data.types)}
-                  onChange={(e) => set("typeId", e.target.value)}
-                />
-                <Select
-                  label="Assigned organization"
-                  required
-                  value={data.organizationId ?? ""}
-                  options={options(lookup.data.organizations)}
-                  onChange={(e) => set("organizationId", e.target.value)}
-                />
-                <FormInput
-                  label="Received date and time"
-                  type="datetime-local"
-                  required
-                  value={data.receivedAt}
-                  onChange={(e) => set("receivedAt", e.target.value)}
-                />
-                <Select
-                  label="Received from"
-                  required
-                  value={data.receivedFromOrgId ?? ""}
-                  options={options(lookup.data.organizations)}
-                  onChange={(e) => set("receivedFromOrgId", e.target.value)}
-                />
-                <Select
-                  label="Receiving depot"
-                  required
-                  value={data.receivingDepotId ?? ""}
-                  options={options(lookup.data.depots)}
-                  onChange={(e) => {
-                    set("receivingDepotId", e.target.value);
-                    if (data.custodianType === "DEPOT")
-                      set("custodianId", e.target.value);
-                  }}
-                />
-                <CustodianFields data={data} set={set} lookups={lookup.data} />
-                <Select
-                  label="Initial condition"
-                  required
-                  value={data.initialCondition}
-                  options={[
-                    { label: "Good / available", value: "GOOD" },
-                    { label: "Damaged", value: "DAMAGED" },
-                    { label: "Requires maintenance", value: "MAINTENANCE" },
-                  ]}
-                  onChange={(e) => set("initialCondition", e.target.value)}
-                />
-                <FormInput
-                  label="Odometer (km)"
-                  type="number"
-                  min={0}
-                  max={10000000}
-                  value={data.odometer ?? ""}
-                  onChange={(e) => set("odometer", e.target.value)}
-                />
-                <FormInput
-                  label="Accessories / equipment"
-                  value={data.accessories ?? ""}
-                  onChange={(e) => set("accessories", e.target.value)}
-                />
-                <FormInput
-                  label="Remarks"
-                  value={data.remarks ?? ""}
-                  onChange={(e) => set("remarks", e.target.value)}
-                />
-              </div>
-            </fieldset>
-            <FormInput
-              label="Initial photographs and supporting documents"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-              multiple
-              disabled={busy || Boolean(saved)}
-              onChange={(e) => {
-                setFiles(Array.from(e.target.files ?? []));
-                setDirty(true);
-              }}
-              hint="Images or PDFs; each file must respect the configured upload limit."
-            />
-            <div className="fg-inventory__actions">
-              <Button type="submit" loading={busy}>
-                {saved ? "Retry evidence uploads" : "Record receipt"}
-              </Button>
-            </div>
-          </form>
-          <ConfirmDialog
-            open={guard.blocker.state === "blocked"}
-            title="Leave receipt form?"
-            message="Unsaved receipt details or pending uploads will be lost."
-            confirmLabel="Leave form"
-            cancelLabel="Keep editing"
-            onConfirm={() =>
-              guard.blocker.state === "blocked" && guard.blocker.proceed()
-            }
-            onCancel={() =>
-              guard.blocker.state === "blocked" && guard.blocker.reset()
-            }
-          />
-        </Card>
-      ) : null}
-    </LoadBoundary>
   );
 }
 function EvidenceList({
@@ -1194,7 +983,7 @@ function Details() {
                 </p>
               )}
             </Card>
-            <Card title="Photographs and supporting evidence">
+            <Card title="Movement evidence" subtitle="Optional evidence for stock operations. Registration files are available in Vehicle details.">
               <Select
                 label="Attach evidence to"
                 value={evidenceMovement}
@@ -1214,8 +1003,8 @@ function Details() {
               />
               {d.documents.length ? (
                 <p>
-                  Additional fleet documents:{" "}
-                  <Link to={`/fleet/vehicles/${id}`}>
+                  Registration documents:{" "}
+                  <Link to={`/inventory/vehicles/${id}`}>
                     Open vehicle documents ({d.documents.length})
                   </Link>
                 </p>

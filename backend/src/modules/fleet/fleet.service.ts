@@ -2,6 +2,7 @@ import {
   inventoryService,
   inventoryScope,
   scopedInventory,
+  receiveTx,
 } from "../inventory/inventory.service";
 import { randomUUID } from "crypto";
 import { Prisma, type VehicleStatus } from "@prisma/client";
@@ -187,10 +188,13 @@ export const fleetService = {
   },
 
   async create(input: CreateVehicleInput, actor: AuthenticatedUser) {
+    if (!actor.permissions.includes('inventory:manage') && !actor.permissions.includes('*')) {
+      throw ApiError.forbidden('Vehicle registration requires inventory management permission');
+    }
     try {
       return await prisma.$transaction(async (tx) => {
         const vehicleCode = input.vehicleCode ?? (await nextVehicleCode(tx));
-        const status = input.status ?? "REGISTERED";
+        const status = "REGISTERED";
         const vehicle = await tx.vehicle.create({
           data: {
             ...(toVehicleData(input) as Prisma.VehicleUncheckedCreateInput),
@@ -210,7 +214,15 @@ export const fleetService = {
             changedById: actor.id,
           },
         });
-        return vehicle;
+        await receiveTx(tx, {
+          vehicleId: vehicle.id,
+          registrationNumber: vehicle.registrationNumber,
+          organizationId: input.organizationId,
+          receivingDepotId: input.depotId,
+          ...input.receiving,
+          remarks: input.remarks,
+        }, actor);
+        return tx.vehicle.findUniqueOrThrow({ where: { id: vehicle.id }, include: vehicleInclude });
       });
     } catch (err) {
       mapPrismaError(err);

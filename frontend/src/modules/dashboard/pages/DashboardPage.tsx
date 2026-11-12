@@ -102,10 +102,10 @@ export function DashboardPage() {
       {canFleet && stats && stats.total > 0 ? <section className="fg-dash__attention" aria-label="Fleet attention summary">
         <Icon name="alert" size={22} />
         <div><h2>What needs attention</h2><p>{countFor(stats, 'UNDER_MAINTENANCE')} under maintenance ? {countFor(stats, 'DAMAGED')} damaged ? {countFor(stats, 'AVAILABLE')} available for allocation</p></div>
-        <Link to="/fleet/vehicles">Review vehicles <Icon name="chevron-right" size={16} /></Link>
+        <Link to="/inventory/vehicles">Review vehicles <Icon name="chevron-right" size={16} /></Link>
       </section> : null}
       {canFleet && stats && stats.total === 0 ? <Card title="Start building your fleet" subtitle="Your operational summary will appear as vehicles are registered.">
-        {hasPermission('fleet:manage') ? <Link to="/fleet/vehicles/new">Register your first vehicle</Link> : <p>Contact your fleet administrator to register vehicles.</p>}
+        {hasPermission('fleet:manage') ? <Link to="/inventory/vehicles/new">Register your first vehicle</Link> : <p>Contact your fleet administrator to register vehicles.</p>}
       </Card> : null}
 
       {/* Fleet summary (real data) */}
@@ -122,8 +122,8 @@ export function DashboardPage() {
                   role="link"
                   tabIndex={0}
                   aria-label={`${c.label}: ${c.value}. View fleet`}
-                  onKeyDown={(event) => { if (event.key === 'Enter') navigate(c.status ? `/fleet/vehicles?status=${c.status}` : '/fleet/vehicles'); }}
-                  onClick={() => navigate(c.status ? `/fleet/vehicles?status=${c.status}` : '/fleet/vehicles')}
+                  onKeyDown={(event) => { if (event.key === 'Enter') navigate(c.status ? `/inventory/vehicles?status=${c.status}` : '/inventory/vehicles'); }}
+                  onClick={() => navigate(c.status ? `/inventory/vehicles?status=${c.status}` : '/inventory/vehicles')}
                 >
                   <div className="fg-dash__stat-top"><span className="fg-dash__stat-icon"><Icon name={c.tone === 'warning' ? 'settings' : c.tone === 'danger' ? 'alert' : 'fleet'} size={18} /></span><Icon name="chevron-right" size={14} /></div>
                   <span className="fg-stat__value">{c.value}</span>
@@ -172,7 +172,7 @@ export function DashboardPage() {
 
         <Card title="Your workspace" subtitle="Everything you need, one step away">
           <ul className="fg-checklist">
-            {canFleet ? <li><Icon name="fleet" size={18} /> <Link to="/fleet">Fleet overview &amp; vehicles</Link></li> : null}
+            {canFleet ? <li><Icon name="fleet" size={18} /> <Link to="/inventory">Inventory &amp; vehicles</Link></li> : null}
             {hasPermission('masterdata:read') ? <li><Icon name="settings" size={18} /> <Link to="/master-data">Master data</Link></li> : null}
             {hasPermission('users:read') ? <li><Icon name="users" size={18} /> <Link to="/users">User management</Link></li> : null}
             <li><Icon name="user-circle" size={18} /> <Link to="/profile">My profile</Link></li>

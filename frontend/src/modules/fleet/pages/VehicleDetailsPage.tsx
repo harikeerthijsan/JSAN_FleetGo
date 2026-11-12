@@ -1,9 +1,7 @@
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
-  type FormEvent,
   type ReactNode,
 } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -23,9 +21,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { NormalizedApiError } from '@/services/apiClient';
 import { fleetService } from '@/services/fleetService';
-import { masterDataService } from '@/services/masterDataService';
 import type {
-  MasterRecord,
   Vehicle,
   VehicleDocument,
   VehicleHistory,
@@ -68,10 +64,8 @@ export function VehicleDetailsPage() {
   const [statusBusy, setStatusBusy] = useState(false);
 
   const [docs, setDocs] = useState<VehicleDocument[]>([]);
-  const [docTypes, setDocTypes] = useState<MasterRecord[]>([]);
   const [history, setHistory] = useState<VehicleHistory | null>(null);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useDocumentTitle(vehicle ? vehicle.vehicleCode : 'Vehicle');
 
@@ -89,8 +83,6 @@ export function VehicleDetailsPage() {
   useEffect(() => { void loadVehicle(); }, [loadVehicle]);
   useEffect(() => {
     fleetService.statusTransitions().then(setTransitions).catch(() => undefined);
-    masterDataService.list('document-types', { pageSize: 100, active: 'true' })
-      .then((r) => setDocTypes(r.data)).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -111,24 +103,6 @@ export function VehicleDetailsPage() {
       setError((e as NormalizedApiError).message);
     } finally {
       setStatusBusy(false);
-    }
-  };
-
-  const uploadDoc = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formEl = e.currentTarget;
-    const fd = new FormData(formEl);
-    if (!(fd.get('file') as File)?.size) { setError('Choose a file to upload'); return; }
-    try {
-      await fleetService.uploadDocument(id, fd);
-      formEl.reset();
-      if (fileRef.current) fileRef.current.value = '';
-      setNotice('Document uploaded.');
-      const list = await fleetService.listDocuments(id);
-      setDocs(list);
-      void loadVehicle();
-    } catch (err) {
-      setError((err as NormalizedApiError).message);
     }
   };
 
@@ -178,7 +152,7 @@ export function VehicleDetailsPage() {
     { key: 'general', label: 'General' },
     { key: 'compliance', label: 'Compliance' },
     { key: 'location', label: 'Location & Custody' },
-    { key: 'documents', label: 'Documents & Photos' },
+    { key: 'documents', label: 'Documents, Photos & Videos' },
     { key: 'history', label: 'Activity & History' },
   ];
 
@@ -189,8 +163,8 @@ export function VehicleDetailsPage() {
         description={`${vehicle.registrationNumber}${vehicle.make ? ' · ' + vehicle.make.name : ''}${vehicle.model ? ' ' + vehicle.model.name : ''}`}
         breadcrumbs={[
           { label: 'FleetGo', to: '/dashboard' },
-          { label: 'Fleet', to: '/fleet' },
-          { label: 'Vehicles', to: '/fleet/vehicles' },
+          { label: 'Inventory', to: '/inventory' },
+          { label: 'Vehicles', to: '/inventory/vehicles' },
           { label: vehicle.vehicleCode },
         ]}
         actions={
@@ -198,7 +172,7 @@ export function VehicleDetailsPage() {
             <StatusBadge tone={STATUS_META[vehicle.status].tone}>{STATUS_META[vehicle.status].label}</StatusBadge>
             {!vehicle.isActive ? <StatusBadge tone="neutral">Inactive</StatusBadge> : null}
             {canManage ? (
-              <Button variant="secondary" onClick={() => navigate(`/fleet/vehicles/${id}/edit`)}>Edit</Button>
+              <Button variant="secondary" onClick={() => navigate(`/inventory/vehicles/${id}/edit`)}>Edit</Button>
             ) : null}
           </div>
         }
@@ -228,8 +202,6 @@ export function VehicleDetailsPage() {
             <Field label="Engine number" value={vehicle.engineNumber} />
             <Field label="Make" value={vehicle.make?.name} />
             <Field label="Model" value={vehicle.model ? (vehicle.model.variant ? `${vehicle.model.name} (${vehicle.model.variant})` : vehicle.model.name) : null} />
-            <Field label="Type" value={vehicle.type?.name} />
-            <Field label="Category" value={vehicle.category?.name} />
             <Field label="Fuel type" value={vehicle.fuelType?.name} />
             <Field label="Manufacturing year" value={vehicle.manufacturingYear} />
             <Field label="Color" value={vehicle.color} />
@@ -283,29 +255,10 @@ export function VehicleDetailsPage() {
 
       {tab === 'documents' ? (
         <>
-          {canManage ? (
-            <Card title="Upload document or photo" className="fg-detail__section">
-              <form className="fg-detail__upload" onSubmit={uploadDoc}>
-                <input ref={fileRef} type="file" name="file" accept="image/*,application/pdf" required />
-                <select name="kind" defaultValue="DOCUMENT" className="fg-select" style={{ maxWidth: 160 }}>
-                  <option value="DOCUMENT">Document</option>
-                  <option value="PHOTO">Photo</option>
-                </select>
-                <select name="documentTypeId" defaultValue="" className="fg-select" style={{ maxWidth: 200 }}>
-                  <option value="">Type (optional)</option>
-                  {docTypes.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-                <input name="label" placeholder="Label (optional)" className="fg-input" style={{ maxWidth: 200 }} />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)' }}>
-                  <input type="checkbox" name="isSensitive" value="true" /> Sensitive
-                </label>
-                <Button type="submit" leftIcon={<Icon name="upload" size={16} />}>Upload</Button>
-              </form>
-            </Card>
-          ) : null}
-          <Card title="Documents & photos" className="fg-detail__section" flush>
+          {canManage ? <p className="fg-form-note">Documents and media are attached in the registration or edit form. Use Edit to add more files.</p> : null}
+          <Card title="Documents, photos & videos" className="fg-detail__section" flush>
             {docs.length === 0 ? (
-              <EmptyState icon="inbox" title="No documents" description="No documents or photos have been uploaded for this vehicle." />
+              <EmptyState icon="inbox" title="No documents" description="No documents, photos or videos have been uploaded for this vehicle." />
             ) : (
               <ul className="fg-doc-list">
                 {docs.map((d) => (
@@ -314,7 +267,7 @@ export function VehicleDetailsPage() {
                     <span className="fg-doc__meta">
                       <span className="fg-doc__name">{d.label || d.fileName}</span>
                       <span className="fg-doc__sub">
-                        {d.kind} · {(d.size / 1024).toFixed(0)} KB
+                        {d.contentType.startsWith('video/') ? 'VIDEO' : d.kind} · {(d.size / 1024).toFixed(0)} KB
                         {d.documentType ? ` · ${d.documentType.name}` : ''}
                         {d.isSensitive ? ' · Sensitive' : ''}
                         {d.uploadedBy ? ` · ${d.uploadedBy.fullName}` : ''}

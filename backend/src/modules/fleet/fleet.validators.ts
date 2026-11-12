@@ -1,5 +1,6 @@
 import { VehicleStatus } from '@prisma/client';
 import { z } from 'zod';
+import { receiptSchema } from '../inventory/inventory.validators';
 
 // Accept an ISO date or empty/undefined; coerce to Date or null.
 const optionalDate = z
@@ -57,9 +58,9 @@ export const createVehicleSchema = z.object({
     .max(new Date().getFullYear() + 1)
     .optional(),
   color: optionalString,
-  organizationId: optionalString,
+  organizationId: z.string().uuid('Choose the assigned organization'),
   vendorId: optionalString,
-  depotId: optionalString,
+  depotId: z.string().uuid('Choose the current depot'),
   insuranceProvider: optionalString,
   insurancePolicyNumber: optionalString,
   insuranceExpiry: optionalDate,
@@ -68,11 +69,16 @@ export const createVehicleSchema = z.object({
   status: z.nativeEnum(VehicleStatus).optional(),
   remarks: optionalString,
   metadata: z.record(z.unknown()).optional(),
+  receiving: receiptSchema.pick({
+    receivedAt: true, receivedFromOrgId: true, custodianType: true,
+    custodianId: true, initialCondition: true, odometer: true, accessories: true,
+  }),
 });
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 
 // All fields optional on update; registrationNumber kept non-empty if present.
 export const updateVehicleSchema = createVehicleSchema
+  .omit({ receiving: true })
   .partial()
   .extend({
     registrationNumber: z.string().trim().min(1).optional(),

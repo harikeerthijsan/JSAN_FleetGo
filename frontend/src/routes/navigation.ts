@@ -30,13 +30,6 @@ export const NAV_ITEMS: NavItem[] = [
     permission: 'dashboard:view',
   },
   {
-    path: '/fleet',
-    label: 'Fleet Management',
-    icon: 'fleet',
-    description: 'Manage fleets, vehicle operational status and assignments.',
-    permission: 'fleet:read',
-  },
-  {
     path: '/master-data',
     label: 'Master Data',
     icon: 'settings',
@@ -59,14 +52,13 @@ export const NAV_ITEMS: NavItem[] = [
     description: 'Raise vehicle requests and manage multi-step approvals.',
     permission: 'tickets:read',
   },
-  {path:'/allocations',label:'Vehicle Allocation',icon:'fleet',description:'Allocate verified inventory against approved tickets.',permission:'allocation:manage'},
   {
     path: '/dispatch',
-    label: 'Dispatch & Trips',
+    label: 'Allocation, Dispatch & Trips',
     icon: 'dispatch',
     description:
       'Allocate and dispatch vehicles, and track trips through delivery.',
-    permission: 'dispatch:read',
+    permission: ['allocation:manage', 'dispatch:read'],
   },
   {
     path: '/tracking',

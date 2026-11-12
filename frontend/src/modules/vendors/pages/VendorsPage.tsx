@@ -506,7 +506,7 @@ function VehiclesCard({ id }: { id: string }) {
     <Card title="Vehicles (assigned or in custody)">
       <DataTable
         columns={[
-          { key: "code", header: "Code", render: (v: VendorVehicle) => <Link to={`/fleet/${v.id}`}>{v.vehicleCode}</Link> },
+          { key: "code", header: "Code", render: (v: VendorVehicle) => <Link to={`/inventory/vehicles/${v.id}`}>{v.vehicleCode}</Link> },
           { key: "reg", header: "Registration", render: (v: VendorVehicle) => v.registrationNumber ?? "—" },
           { key: "status", header: "Status", render: (v: VendorVehicle) => human(v.status) },
           { key: "rel", header: "Relationship", render: (v: VendorVehicle) => (v.vendorId === id ? "In custody" : "Assigned") },

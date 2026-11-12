@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   authenticate,
   authorize,
-  uploadSingle,
+  uploadMediaSingle,
   validate,
 } from '../../middlewares';
 import { idParamSchema } from '../../validators/common.validators';
@@ -80,7 +80,7 @@ router.get(
 router.post(
   '/vehicles/:id/documents',
   authorize('fleet:manage'),
-  uploadSingle('file'),
+  uploadMediaSingle('file'),
   fleetController.uploadDocument,
 );
 router.get(

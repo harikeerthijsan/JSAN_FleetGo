@@ -185,3 +185,8 @@
     padding: 14px;
   }
 }
+.fg-inventory__register { min-height: 44px; padding-inline: 20px; }
+@media (max-width: 560px) {
+  .fg-inventory > .fg-pagetitle .fg-pagetitle__actions { width: 100%; }
+  .fg-inventory__register { width: 100%; }
+}

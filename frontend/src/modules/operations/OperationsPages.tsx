@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   Link,
+  Navigate,
   NavLink,
   Route,
   Routes,
@@ -199,107 +200,48 @@ function Unsaved({ dirty }: { dirty: boolean }) {
 function name(refs: Ref[] | undefined, id: string | null | undefined) {
   return refs?.find((r) => r.id === id)?.name ?? id ?? "—";
 }
-export function AllocationsPage() {
-  useDocumentTitle("Vehicle Allocation");
-  const { hasPermission } = useAuth();
-  return (
-    <div className="fg-ops">
-      <PageTitle
-        title="Vehicle allocation"
-        description="Match approved requests with verified inventory."
-      />
-      <nav className="fg-ops__tabs">
-        <NavLink end to="/allocations">
-          Overview
-        </NavLink>
-        {hasPermission("allocation:manage") ? (
-          <>
-            <NavLink to="/allocations/queue">Approved ticket queue</NavLink>
-            <NavLink to="/allocations/new">Create allocation</NavLink>
-          </>
-        ) : null}
-        <NavLink to="/allocations/list">Allocations</NavLink>
-        <NavLink to="/allocations/reports">Reports</NavLink>
-      </nav>
-      <Routes>
-        <Route index element={<Dashboard />} />
-        <Route
-          path="queue"
-          element={
-            <Protected permission="allocation:manage">
-              <TicketQueue />
-            </Protected>
-          }
-        />
-        <Route
-          path="new"
-          element={
-            <Protected permission="allocation:manage">
-              <CreateAllocation />
-            </Protected>
-          }
-        />
-        <Route path="list" element={<AllocationList />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path=":id" element={<AllocationDetails />} />
-      </Routes>
-    </div>
-  );
-}
 export function OperationsDispatchPage() {
-  useDocumentTitle("Dispatch & Trips");
+  useDocumentTitle("Allocation, Dispatch & Trips");
   const { hasPermission } = useAuth();
+  const canAllocate = hasPermission('allocation:manage');
+  const canReadDispatch = hasPermission('dispatch:read');
+  const readDispatch = (content: ReactNode) => <Protected permission="dispatch:read">{content}</Protected>;
   return (
     <div className="fg-ops">
-      <PageTitle
-        title="Dispatch & trips"
-        description="Departure readiness, transport custody and every milestone."
-      />
-      <nav className="fg-ops__tabs">
-        {[
-          ["", "Overview"],
-          ["list", "Dispatches"],
-          ["trips", "Trips"],
-          ["exceptions", "Exceptions"],
-          ["reports", "Reports"],
-          ...(hasPermission("dispatch:manage")
-            ? [
-                ["new", "Create dispatch"],
-                ["drivers", "Drivers"],
-                ["transporters", "Transporters"],
-              ]
-            : []),
-        ].map(([p, title]) => (
-          <NavLink end={p === ""} key={p} to={`/dispatch${p ? "/" + p : ""}`}>
-            {title}
-          </NavLink>
-        ))}
+      <PageTitle title="Allocation, Dispatch & Trips" description="One workflow from approved request to vehicle allocation, departure and delivery." />
+      <p className="fg-ops__workflow">Approved request <span aria-hidden="true">&rarr;</span> Allocate cars <span aria-hidden="true">&rarr;</span> Prepare dispatch <span aria-hidden="true">&rarr;</span> Track trip <span aria-hidden="true">&rarr;</span> Confirm delivery</p>
+      <nav className="fg-ops__tabs" aria-label="Allocation dispatch and trip sections">
+        {canReadDispatch ? <NavLink end to="/dispatch">Overview</NavLink> : null}
+        {canAllocate ? <NavLink to="/dispatch/requests">Approved requests</NavLink> : null}
+        <NavLink end to="/dispatch/allocations">Allocations</NavLink>
+        {canAllocate ? <NavLink to="/dispatch/allocations/new">Create allocation</NavLink> : null}
+        {canReadDispatch ? <>
+          <NavLink to="/dispatch/list">Dispatches</NavLink>
+          <NavLink to="/dispatch/trips">Trips</NavLink>
+          <NavLink to="/dispatch/exceptions">Exceptions</NavLink>
+        </> : null}
+        <NavLink to="/dispatch/reports">Reports</NavLink>
+        {canReadDispatch && hasPermission('dispatch:manage') ? <>
+          <NavLink to="/dispatch/new">Create dispatch</NavLink>
+          <NavLink to="/dispatch/drivers">Drivers</NavLink>
+          <NavLink to="/dispatch/transporters">Transporters</NavLink>
+        </> : null}
       </nav>
       <Routes>
-        <Route index element={<Dashboard />} />
-        <Route path="list" element={<DispatchList />} />
-        <Route
-          path="new"
-          element={
-            <Protected permission="dispatch:manage">
-              <CreateDispatch />
-            </Protected>
-          }
-        />
-        <Route
-          path="drivers"
-          element={
-            <Protected permission="dispatch:manage">
-              <Drivers />
-            </Protected>
-          }
-        />
-        <Route path="transporters" element={<Transporters />} />
-        <Route path="trips" element={<Trips />} />
-        <Route path="trips/:id" element={<TripDetails />} />
-        <Route path="exceptions" element={<Exceptions />} />
+        <Route index element={canReadDispatch ? <Dashboard /> : <Navigate to="/dispatch/requests" replace />} />
+        <Route path="requests" element={<Protected permission="allocation:manage"><TicketQueue /></Protected>} />
+        <Route path="allocations" element={<AllocationList />} />
+        <Route path="allocations/new" element={<Protected permission="allocation:manage"><CreateAllocation /></Protected>} />
+        <Route path="allocations/:id" element={<AllocationDetails />} />
+        <Route path="list" element={readDispatch(<DispatchList />)} />
+        <Route path="new" element={readDispatch(<Protected permission="dispatch:manage"><CreateDispatch /></Protected>)} />
+        <Route path="drivers" element={readDispatch(<Protected permission="dispatch:manage"><Drivers /></Protected>)} />
+        <Route path="transporters" element={readDispatch(<Transporters />)} />
+        <Route path="trips" element={readDispatch(<Trips />)} />
+        <Route path="trips/:id" element={readDispatch(<TripDetails />)} />
+        <Route path="exceptions" element={readDispatch(<Exceptions />)} />
         <Route path="reports" element={<Reports />} />
-        <Route path=":id" element={<DispatchDetails />} />
+        <Route path=":id" element={readDispatch(<DispatchDetails />)} />
       </Routes>
     </div>
   );
@@ -384,7 +326,7 @@ function TicketQueue() {
       header: "Action",
       render: (t) =>
         t.pending ? (
-          <Link to={`/allocations/new?ticketId=${t.id}`}>
+          <Link to={`/dispatch/allocations/new?ticketId=${t.id}`}>
             Allocate vehicles
           </Link>
         ) : (
@@ -431,6 +373,8 @@ function CreateAllocation() {
     ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)),
     ...(data.sourceDepotId ? { depotId: data.sourceDepotId } : {}),
   });
+  const formRef = useRef<HTMLFormElement>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<AvailableVehicle[]>([]);
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -441,6 +385,8 @@ function CreateAllocation() {
   const set = (k: string, v: string) => {
     key.current = crypto.randomUUID();
     setDirty(true);
+    setError('');
+    setFieldErrors((errors) => ({ ...errors, [k]: '' }));
     setData((d) => ({ ...d, [k]: v }));
   };
   useEffect(() => {
@@ -456,6 +402,31 @@ function CreateAllocation() {
     }
   }, [queue.data, data.ticketId]);
   const ticket = queue.data?.find((t) => t.id === data.ticketId);
+  const review = () => {
+    const errors: Record<string, string> = {};
+    const required: Record<string, string> = {
+      ticketId: 'Choose an approved ticket.', sourceDepotId: 'Choose the source depot.',
+      destinationDepotId: 'Choose the destination depot.', receivingOrgId: 'Choose the receiving organization or vendor.',
+      transporterId: 'Choose a transport partner.', plannedDispatchAt: 'Enter the planned dispatch date and time.',
+      expectedDeliveryAt: 'Enter the expected delivery date and time.',
+    };
+    for (const [field, message] of Object.entries(required)) if (!data[field]?.trim()) errors[field] = message;
+    if (data.ticketId && (!ticket || ticket.pending <= 0)) errors.ticketId = 'Choose an approved ticket with a pending quantity.';
+    if (data.plannedDispatchAt && Number.isNaN(new Date(data.plannedDispatchAt).getTime())) errors.plannedDispatchAt = 'Enter a valid planned dispatch time.';
+    if (data.expectedDeliveryAt && Number.isNaN(new Date(data.expectedDeliveryAt).getTime())) errors.expectedDeliveryAt = 'Enter a valid expected delivery time.';
+    if (data.plannedDispatchAt && data.expectedDeliveryAt && new Date(data.expectedDeliveryAt) <= new Date(data.plannedDispatchAt)) errors.expectedDeliveryAt = 'Expected delivery must be after planned dispatch.';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      setError('Complete the highlighted allocation details before reviewing.');
+      const first = Object.keys(errors)[0];
+      requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus());
+      return;
+    }
+    if (!selected.length) { setError('Select at least one available vehicle in the inventory table below, then click Review allocation.'); return; }
+    if (selected.length > Math.min(ticket?.pending ?? 0, 100)) { setError('Selected vehicles exceed the remaining requested quantity or the 100-vehicle limit.'); return; }
+    setError('');
+    setConfirm(true);
+  };
   const save = async () => {
     setBusy(true);
     setError("");
@@ -473,7 +444,7 @@ function CreateAllocation() {
       );
       setDirty(false);
       guard.allowNavigation();
-      navigate(`/allocations/${r.id}`);
+      navigate(`/dispatch/allocations/${r.id}`);
     } catch (e) {
       setError(msg(e));
       setConfirm(false);
@@ -542,22 +513,13 @@ function CreateAllocation() {
     >
       {refs.data ? (
         <>
-          <Feedback error={error || choices.error} />
-          <Card title="Allocation request">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!selected.length) {
-                  setError("Select at least one vehicle.");
-                  return;
-                }
-                setConfirm(true);
-              }}
-            >
+          <Feedback error={choices.error} />
+          <Card title="1. Allocation details" subtitle="Complete these details, then select the cars in the next section.">
+            <form id="allocation-request-form" ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); review(); }}>
               <fieldset disabled={busy}>
                 <div className="fg-ops__form">
                   <Select
-                    label="Approved ticket"
+                    label="Approved ticket" name="ticketId" error={fieldErrors.ticketId}
                     required
                     value={data.ticketId}
                     options={[
@@ -575,7 +537,7 @@ function CreateAllocation() {
                     }}
                   />
                   <Select
-                    label="Source depot"
+                    label="Source depot" name="sourceDepotId" error={fieldErrors.sourceDepotId}
                     required
                     value={data.sourceDepotId}
                     options={opts(refs.data.depots)}
@@ -586,14 +548,14 @@ function CreateAllocation() {
                     }}
                   />
                   <Select
-                    label="Destination depot"
+                    label="Destination depot" name="destinationDepotId" error={fieldErrors.destinationDepotId}
                     required
                     value={data.destinationDepotId}
                     options={opts(refs.data.depots)}
                     onChange={(e) => set("destinationDepotId", e.target.value)}
                   />
                   <Select
-                    label="Receiving organization / vendor"
+                    label="Receiving organization / vendor" name="receivingOrgId" error={fieldErrors.receivingOrgId}
                     required
                     value={data.receivingOrgId}
                     options={opts(
@@ -604,7 +566,7 @@ function CreateAllocation() {
                     onChange={(e) => set("receivingOrgId", e.target.value)}
                   />
                   <Select
-                    label="Transport partner"
+                    label="Transport partner" name="transporterId" error={fieldErrors.transporterId}
                     required
                     value={data.transporterId}
                     options={opts(
@@ -617,33 +579,25 @@ function CreateAllocation() {
                     onChange={(e) => set("transporterId", e.target.value)}
                   />
                   <FormInput
-                    label="Planned dispatch"
+                    label="Planned dispatch" name="plannedDispatchAt" error={fieldErrors.plannedDispatchAt}
                     type="datetime-local"
                     required
                     value={data.plannedDispatchAt}
                     onChange={(e) => set("plannedDispatchAt", e.target.value)}
                   />
                   <FormInput
-                    label="Expected delivery"
+                    label="Expected delivery" name="expectedDeliveryAt" error={fieldErrors.expectedDeliveryAt}
                     type="datetime-local"
                     required
                     value={data.expectedDeliveryAt}
                     onChange={(e) => set("expectedDeliveryAt", e.target.value)}
                   />
                 </div>
-                <p>
-                  Requested {ticket?.requested ?? 0} · Allocated{" "}
-                  {ticket?.allocated ?? 0} · Pending {ticket?.pending ?? 0} ·
-                  Selected {selected.length}
-                </p>
-                <Button type="submit" disabled={!selected.length}>
-                  Review allocation
-                </Button>
               </fieldset>
             </form>
           </Card>
           <Card
-            title="Available inventory selector"
+            title="2. Select vehicles"
             subtitle="Only available vehicles can be selected. Other status filters are for review; availability is checked again under locks."
           >
             <div className="fg-ops__form">
@@ -697,6 +651,16 @@ function CreateAllocation() {
               total={choices.total}
               onPageChange={setPage}
             />
+            <div className="fg-ops__allocation-review">
+              <div>
+                <strong>{selected.length} vehicle{selected.length === 1 ? '' : 's'} selected</strong>
+                <p id="allocation-review-help">Requested {ticket?.requested ?? 0} ? Already allocated {ticket?.allocated ?? 0} ? Pending {ticket?.pending ?? 0}</p>
+              </div>
+              <Button type="submit" form="allocation-request-form" disabled={busy} aria-describedby="allocation-review-help">
+                Review allocation
+              </Button>
+            </div>
+            {error ? <div role="alert" className="fg-auth__error">{error}</div> : null}
           </Card>
           <ConfirmDialog
             open={confirm}
@@ -730,7 +694,7 @@ function AllocationList() {
     {
       key: "ref",
       header: "Allocation",
-      render: (r) => <Link to={`/allocations/${r.id}`}>{r.reference}</Link>,
+      render: (r) => <Link to={`/dispatch/allocations/${r.id}`}>{r.reference}</Link>,
     },
     {
       key: "ticket",
@@ -2474,7 +2438,7 @@ function Reports() {
             >
               Export trip status report
             </Button>
-            <Link to="/allocations/list">Allocation register</Link>
+            <Link to="/dispatch/allocations">Allocation register</Link>
             <Link to="/dispatch/trips">Trip register</Link>
           </div>
           <BarChart data={s.data.deliveryTiming} />

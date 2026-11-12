@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -16,10 +16,10 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { NormalizedApiError } from '@/services/apiClient';
 import { fleetService } from '@/services/fleetService';
 import { masterDataService } from '@/services/masterDataService';
-import { organizationService } from '@/services/organizationService';
+import { inventoryApi } from '@/services/inventoryService';
+import type { InventoryLookups } from '@/types/inventory';
 import type { Organization } from '@/types/auth';
 import type { MasterRecord } from '@/types/vehicle';
-import { FleetTabs } from '../components/FleetTabs';
 import './VehicleForm.css';
 
 type FormState = Record<string, string>;
@@ -29,6 +29,8 @@ const EMPTY: FormState = {
   manufacturingYear: '', color: '', organizationId: '', vendorId: '', depotId: '',
   insuranceProvider: '', insurancePolicyNumber: '', insuranceExpiry: '',
   registrationCertNumber: '', registrationExpiry: '', remarks: '',
+  receivedAt: '', receivedFromOrgId: '', custodianType: 'DEPOT',
+  initialCondition: 'GOOD', odometer: '', accessories: '',
 };
 
 /** '' → undefined; date (yyyy-mm-dd) → ISO; numbers coerced. */
@@ -53,9 +55,16 @@ export function VehicleFormPage() {
   useDocumentTitle(isEdit ? 'Edit Vehicle' : 'Register Vehicle');
   const navigate = useNavigate();
 
-  const [form, setForm] = useState<FormState>(EMPTY);
+  const [form, setForm] = useState<FormState>(() => {
+    const now = new Date();
+    return { ...EMPTY, receivedAt: new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0,16) };
+  });
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [videos, setVideos] = useState<File[]>([]);
+  const [documents, setDocuments] = useState<File[]>([]);
+  const [registeredId, setRegisteredId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [dirty, setDirty] = useState(false);
@@ -70,12 +79,10 @@ export function VehicleFormPage() {
 
   const [makes, setMakes] = useState<MasterRecord[]>([]);
   const [models, setModels] = useState<MasterRecord[]>([]);
-  const [types, setTypes] = useState<MasterRecord[]>([]);
-  const [categories, setCategories] = useState<MasterRecord[]>([]);
   const [fuels, setFuels] = useState<MasterRecord[]>([]);
   const [ownerships, setOwnerships] = useState<MasterRecord[]>([]);
   const [depots, setDepots] = useState<MasterRecord[]>([]);
-  const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [orgs, setOrgs] = useState<Pick<Organization, 'id' | 'name' | 'type'>[]>([]);
 
   const set = (k: keyof FormState) => (v: string) => {
     setDirty(true); setFieldErrors((errors) => ({ ...errors, [k]: '' }));
@@ -86,19 +93,12 @@ export function VehicleFormPage() {
     const opt = { pageSize: 200, active: 'true' as const };
     masterDataService.list('makes', opt).then((r) => setMakes(r.data)).catch(() => setLookupError(true));
     masterDataService.list('models', { pageSize: 200, active: 'true' }).then((r) => setModels(r.data)).catch(() => setLookupError(true));
-    masterDataService.list('types', opt).then((r) => {
-      setTypes(r.data);
-      // All vehicles are cars — default the type to "Car" on a new vehicle.
-      if (!id) {
-        const car = r.data.find((x) => x.name === 'Car') ?? r.data[0];
-        if (car) setForm((f) => (f.typeId ? f : { ...f, typeId: car.id }));
-      }
-    }).catch(() => setLookupError(true));
-    masterDataService.list('categories', opt).then((r) => setCategories(r.data)).catch(() => setLookupError(true));
     masterDataService.list('fuel-types', opt).then((r) => setFuels(r.data)).catch(() => setLookupError(true));
     masterDataService.list('ownership-types', opt).then((r) => setOwnerships(r.data)).catch(() => setLookupError(true));
-    masterDataService.list('depots', { pageSize: 200 }).then((r) => setDepots(r.data)).catch(() => setLookupError(true));
-    organizationService.list({ pageSize: 200 }).then((r) => setOrgs(r.data)).catch(() => setLookupError(true));
+    inventoryApi.get<InventoryLookups>('/lookups').then((r) => {
+      setOrgs(r.organizations.map((o) => ({ id: o.id, name: o.name, type: o.type as Organization['type'] })));
+      setDepots(r.depots);
+    }).catch(() => setLookupError(true));
   }, []);
 
   useEffect(() => {
@@ -137,27 +137,54 @@ export function VehicleFormPage() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving || registeredId) return;
     setError(null);
     const invalid: Record<string, string> = {};
     if (!form.registrationNumber.trim()) invalid.registrationNumber = 'Enter a registration number.';
+    if (!isEdit) {
+      if (!form.organizationId) invalid.organizationId = 'Choose the assigned organization.';
+      if (!form.depotId) invalid.depotId = 'Choose the current depot.';
+      if (!form.receivedFromOrgId) invalid.receivedFromOrgId = 'Choose the source organization.';
+      if (!form.receivedAt || Number.isNaN(new Date(form.receivedAt).getTime()) || new Date(form.receivedAt).getTime() > Date.now() + 60000) invalid.receivedAt = 'Enter a valid arrival date and time that is not in the future.';
+      if (form.custodianType === 'VENDOR' && !form.vendorId) invalid.vendorId = 'Choose the current vendor.';
+      if (form.odometer && (!Number.isInteger(Number(form.odometer)) || Number(form.odometer) < 0 || Number(form.odometer) > 10000000)) invalid.odometer = 'Enter a whole number from 0 to 10000000.';
+    }
     if (form.vin.trim() && !/^[A-HJ-NPR-Z0-9]{11,17}$/i.test(form.vin.trim())) invalid.vin = 'Use 11?17 letters and numbers, excluding I, O and Q.';
     const year = Number(form.manufacturingYear);
     if (form.manufacturingYear && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1)) invalid.manufacturingYear = `Use a year between 1950 and ${new Date().getFullYear() + 1}.`;
+    if ([...photos, ...videos, ...documents].some((file) => file.size > 104_857_600)) invalid.media = 'Each photo, video or document must be 100 MB or less.';
     setFieldErrors(invalid);
     if (Object.keys(invalid).length) { setError('Check the highlighted fields before saving.'); return; }
     setSaving(true);
     try {
       const payload = buildPayload(form);
+      if (!isEdit) payload.receiving = {
+        receivedAt: new Date(form.receivedAt).toISOString(),
+        receivedFromOrgId: form.receivedFromOrgId,
+        custodianType: form.custodianType,
+        custodianId: form.custodianType === 'DEPOT' ? form.depotId : form.custodianType === 'VENDOR' ? form.vendorId : form.organizationId,
+        initialCondition: form.initialCondition,
+        ...(form.odometer !== '' ? { odometer: Number(form.odometer) } : {}),
+        ...(form.accessories.trim() ? { accessories: form.accessories.trim() } : {}),
+      };
       const saved = isEdit && id
         ? await fleetService.update(id, payload)
         : await fleetService.create(payload);
+      setRegisteredId(saved.id);
+      for (const file of [...photos, ...videos, ...documents]) {
+        const media = new FormData();
+        media.append('file', file);
+        media.append('kind', file.type.startsWith('image/') ? 'PHOTO' : 'DOCUMENT');
+        media.append('label', file.name);
+        await fleetService.uploadDocument(saved.id, media);
+      }
       setDirty(false); allowNavigation();
-      navigate(`/fleet/vehicles/${saved.id}`);
+      navigate(`/inventory/vehicles/${saved.id}`);
     } catch (err) {
       const apiError = err as NormalizedApiError;
       if (Array.isArray(apiError.details)) {
         const errors: Record<string, string> = {};
-        for (const issue of apiError.details) if (issue && typeof issue.field === 'string' && typeof issue.message === 'string') errors[issue.field] = issue.message;
+        for (const issue of apiError.details) if (issue && typeof issue.field === 'string' && typeof issue.message === 'string') errors[issue.field.replace(/^receiving\./, '')] = issue.message;
         setFieldErrors(errors);
       }
       setError(apiError.message ?? 'Could not save vehicle. Your changes are still here.');
@@ -177,17 +204,17 @@ export function VehicleFormPage() {
     <div>
       <PageTitle
         title={isEdit ? 'Edit Vehicle' : 'Register Vehicle'}
-        description={isEdit ? 'Update the vehicle record.' : 'Add a new vehicle to the fleet. Only registration number is required.'}
+        description={isEdit ? 'Update the vehicle record.' : 'Register the car and add it to inventory in one step. Complete the details when the car arrives.'}
         breadcrumbs={[
           { label: 'FleetGo', to: '/dashboard' },
-          { label: 'Fleet', to: '/fleet' },
-          { label: 'Vehicles', to: '/fleet/vehicles' },
+          { label: 'Inventory', to: '/inventory' },
+          { label: 'Vehicles', to: '/inventory/vehicles' },
           { label: isEdit ? 'Edit' : 'Register' },
         ]}
       />
-      <FleetTabs />
 
       {lookupError ? <p role="alert" className="fg-feedback">Some selection lists could not be loaded. Save your work before reloading this page to try again.</p> : null}
+      {registeredId && error ? <p role="status" className="fg-feedback">The vehicle details were saved, but some files could not be uploaded. <Link to={`/inventory/vehicles/${registeredId}/edit`} onClick={() => { setDirty(false); allowNavigation(); }}>Open the registered vehicle</Link> and add the missing files in the registration or edit form. Do not register it again.</p> : null}
       <form ref={formRef} onSubmit={onSubmit} noValidate>
         <fieldset disabled={saving} className="fg-form-fieldset">
         {error ? <div className="fg-auth__error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>{error}</div> : null}
@@ -207,10 +234,6 @@ export function VehicleFormPage() {
               options={[{ label: '—', value: '' }, ...opt(makes)]} />
             <Select label="Model" name="modelId" error={fieldErrors.modelId} value={form.modelId} onChange={(e) => set('modelId')(e.target.value)}
               options={[{ label: '—', value: '' }, ...filteredModels.map((m) => ({ label: m.variant ? `${m.name} (${m.variant})` : m.name, value: m.id }))]} />
-            <Select label="Type" name="typeId" error={fieldErrors.typeId} value={form.typeId} onChange={(e) => set('typeId')(e.target.value)}
-              options={[{ label: '—', value: '' }, ...opt(types)]} />
-            <Select label="Category" name="categoryId" error={fieldErrors.categoryId} value={form.categoryId} onChange={(e) => set('categoryId')(e.target.value)}
-              options={[{ label: '—', value: '' }, ...opt(categories)]} />
             <Select label="Fuel type" name="fuelTypeId" error={fieldErrors.fuelTypeId} value={form.fuelTypeId} onChange={(e) => set('fuelTypeId')(e.target.value)}
               options={[{ label: '—', value: '' }, ...opt(fuels)]} />
             <FormInput label="Manufacturing year" type="number" value={form.manufacturingYear} onChange={(e) => set('manufacturingYear')(e.target.value)} />
@@ -222,14 +245,27 @@ export function VehicleFormPage() {
           <div className="fg-form-grid">
             <Select label="Ownership type" name="ownershipTypeId" error={fieldErrors.ownershipTypeId} value={form.ownershipTypeId} onChange={(e) => set('ownershipTypeId')(e.target.value)}
               options={[{ label: '—', value: '' }, ...opt(ownerships)]} />
-            <Select label="Assigned organization" name="organizationId" error={fieldErrors.organizationId} value={form.organizationId} onChange={(e) => set('organizationId')(e.target.value)}
+            <Select label="Assigned organization" required={!isEdit} name="organizationId" error={fieldErrors.organizationId} value={form.organizationId} onChange={(e) => set('organizationId')(e.target.value)}
               options={[{ label: '—', value: '' }, ...orgs.map((o) => ({ label: `${o.name} (${o.type})`, value: o.id }))]} />
-            <Select label="Current vendor" name="vendorId" error={fieldErrors.vendorId} value={form.vendorId} onChange={(e) => set('vendorId')(e.target.value)}
-              options={[{ label: '—', value: '' }, ...vendorOrgs.map((o) => ({ label: o.name, value: o.id }))]} />
-            <Select label="Current depot / location" name="depotId" error={fieldErrors.depotId} value={form.depotId} onChange={(e) => set('depotId')(e.target.value)}
+            {isEdit ? <Select label="Current vendor" name="vendorId" error={fieldErrors.vendorId} value={form.vendorId} onChange={(e) => set('vendorId')(e.target.value)}
+              options={[{ label: '—', value: '' }, ...vendorOrgs.map((o) => ({ label: o.name, value: o.id }))]} /> : null}
+            <Select label="Current depot / location" required={!isEdit} name="depotId" error={fieldErrors.depotId} value={form.depotId} onChange={(e) => set('depotId')(e.target.value)}
               options={[{ label: '—', value: '' }, ...opt(depots)]} />
           </div>
         </Card>
+
+        {!isEdit ? <Card title="Arrival & inventory details" subtitle="These details create the inventory entry automatically. There is no separate receiving step." className="fg-form-section">
+          <div className="fg-form-grid">
+            <FormInput label="Arrival date and time" type="datetime-local" required value={form.receivedAt} error={fieldErrors.receivedAt} onChange={(e) => set('receivedAt')(e.target.value)} />
+            <Select label="Received from organization" required value={form.receivedFromOrgId} error={fieldErrors.receivedFromOrgId} onChange={(e) => set('receivedFromOrgId')(e.target.value)} options={[{label:'Select source organization',value:''},...orgs.map((o)=>({label:o.name,value:o.id}))]} />
+            <Select label="Vehicle held by" required value={form.custodianType} onChange={(e) => { set('custodianType')(e.target.value); if (e.target.value !== 'VENDOR') set('vendorId')(''); }} options={[{label:'Current depot',value:'DEPOT'},{label:'Vendor / transport partner',value:'VENDOR'},{label:'Assigned organization',value:'ORGANIZATION'}]} />
+            {form.custodianType === 'VENDOR' ? <Select label="Current vendor" required value={form.vendorId} error={fieldErrors.vendorId} onChange={(e)=>set('vendorId')(e.target.value)} options={[{label:'Select vendor',value:''},...vendorOrgs.map((o)=>({label:o.name,value:o.id}))]} /> : null}
+            <Select label="Initial condition" required value={form.initialCondition} onChange={(e)=>set('initialCondition')(e.target.value)} options={[{label:'Good',value:'GOOD'},{label:'Damaged',value:'DAMAGED'},{label:'Requires maintenance',value:'MAINTENANCE'}]} />
+            <FormInput label="Odometer (km)" type="number" min={0} max={10000000} step={1} value={form.odometer} error={fieldErrors.odometer} onChange={(e)=>set('odometer')(e.target.value)} />
+            <FormInput label="Accessories / equipment" value={form.accessories} onChange={(e)=>set('accessories')(e.target.value)} />
+          </div>
+          <p className="fg-form-note">Good cars at a depot become Available. Vendor-held cars become At Vendor. Damaged or maintenance cars stay unavailable.</p>
+        </Card> : null}
 
         <Card title="Compliance" className="fg-form-section">
           <div className="fg-form-grid">
@@ -245,9 +281,18 @@ export function VehicleFormPage() {
           <FormInput label="Remarks" name="remarks" error={fieldErrors.remarks} value={form.remarks} onChange={(e) => set('remarks')(e.target.value)} />
         </Card>
 
+        <Card title="Photos, videos & documents" subtitle="Attach vehicle photos, videos and PDF documents here when registering or updating the car. Up to 100 MB per file." className="fg-form-section">
+          <div className="fg-form-grid">
+            <label className="fg-vehicle-media"><span>Vehicle photos</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple onChange={(e) => { setPhotos(Array.from(e.target.files ?? [])); setDirty(true); }} />{photos.length ? <small>{photos.length} photo(s) selected</small> : null}</label>
+            <label className="fg-vehicle-media"><span>Vehicle videos</span><input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska" multiple onChange={(e) => { setVideos(Array.from(e.target.files ?? [])); setDirty(true); }} />{videos.length ? <small>{videos.length} video(s) selected</small> : null}</label>
+            <label className="fg-vehicle-media"><span>Vehicle documents (PDF)</span><input type="file" accept="application/pdf" multiple onChange={(e) => { setDocuments(Array.from(e.target.files ?? [])); setDirty(true); }} />{documents.length ? <small>{documents.length} document(s) selected</small> : null}</label>
+          </div>
+          {fieldErrors.media ? <p role="alert" className="fg-auth__error">{fieldErrors.media}</p> : null}
+        </Card>
+
         <div className="fg-form-actions">
           <Button variant="secondary" type="button" onClick={() => navigate(-1)} disabled={saving}>Cancel</Button>
-          <Button type="submit" loading={saving}>{isEdit ? 'Save changes' : 'Register vehicle'}</Button>
+          <Button type="submit" loading={saving} disabled={!!registeredId}>{isEdit ? 'Save changes' : 'Register vehicle & add to inventory'}</Button>
         </div>
         </fieldset>
       </form>

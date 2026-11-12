@@ -4,7 +4,7 @@
 
 This guide explains how to use FleetGo to request vehicles, manage stock, arrange vehicle movements, check deliveries, and keep supporting records. It is written for people who do not need technical knowledge to do their work.
 
-Edition: 4 November 2026. This guide describes the current application. Your account may show fewer menus because access depends on your job, organization, and assigned locations.
+Edition: 11 November 2026. This guide describes the current application. Your account may show fewer menus because access depends on your job, organization, and assigned locations.
 
 Read sections 1 to 4 first. Then use the task finder to go directly to the work you need to do. Complete only the steps that belong to your role. Button wording may vary between screens; always read the confirmation message before accepting an action.
 
@@ -16,7 +16,7 @@ Read sections 1 to 4 first. Then use the task finder to go directly to the work 
 - Understand vehicle and request statuses: section 4.
 - Review today's work: section 5.
 - Add reference information or vehicles: sections 6 and 7.
-- Receive, find, reserve, transfer, or count vehicles: sections 8 to 13.
+- Check inventory, reserve, transfer, or count vehicles: sections 8 to 13.
 - Request a vehicle or report an issue: section 14.
 - Approve a request: section 15.
 - Assign vehicles to an approved request: section 16.
@@ -89,13 +89,13 @@ Some screens show a technical record identifier, sometimes labelled UUID or ID. 
 
 ## 3 Choosing the right work area
 
-Requesters normally work in Ticketing & Approvals and My Tickets. Approvers use Approval Inbox. Stock staff use Inventory Management. Operations staff use Vehicle Allocation and Dispatch & Trips. Drivers and transport partners use the information and actions permitted to their account. Inspectors and receiving staff use Inspections & Handover. Administrators maintain reference information, accounts, and workflow rules.
+Requesters normally work in Ticketing & Approvals and My Tickets. Approvers use Approval Inbox. Stock staff use Inventory Management. Operations staff use the combined Allocation, Dispatch & Trips workspace. Drivers and transport partners use the information and actions permitted to their account. Inspectors and receiving staff use Inspections & Handover. Administrators maintain reference information, accounts, and workflow rules.
 
 Your role may combine several responsibilities. If a menu or button is missing, ask your administrator whether your role includes that task. Records are also limited by organization, custody, and depot assignments. Two users can correctly see different totals.
 
 ### The usual sequence
 
-Set up reference information → Register or receive a vehicle → Create a request → Approve the request → Allocate vehicles → Prepare inspection and dispatch → Confirm departure → Monitor the journey → Record delivery → Complete receiving checks and handover → Review reports.
+Set up reference information → Register a vehicle with arrival and custody details → Create a request → Approve the request → Allocate vehicles → Prepare inspection and dispatch → Confirm departure → Monitor the journey → Record delivery → Complete receiving checks and handover → Review reports.
 
 Not every task uses every stage. For example, reporting a maintenance issue starts with an existing vehicle and a maintenance ticket.
 
@@ -166,59 +166,57 @@ For a vehicle model, choose the correct make. For a depot, use the agreed locati
 
 Check the result: the saved item appears in the appropriate reference list and can be selected where applicable.
 
-## 7 Managing vehicle records
+## 7 Registering and viewing vehicles in Inventory
 
-Purpose: maintain the vehicle's identity and supporting information. Physical receipt and custody are managed separately in Inventory Management.
+Purpose: register the car, record its insurance and arrival information, and add it to inventory in one step. Register it when it has arrived so location and custody reflect the real situation.
 
 ### Find a vehicle
 
-1. Open Fleet Management and its vehicle list.
+1. Open Inventory Management > Vehicles.
 2. Search by registration number or vehicle code and apply relevant filters.
-3. Open the matching vehicle.
+3. Click anywhere on the matching vehicle row to open its details.
 4. Verify the registration and VIN or chassis number before making any change.
-5. Review its specifications, status, documents, and photographs.
+5. Use Vehicle details for the car profile and Stock & custody for inventory history and operations.
+6. Review its specifications, status, documents, and photographs.
 
 ### Add or edit a vehicle
 
 1. Search first to avoid a duplicate record.
-2. Use the add-vehicle action, or open an existing vehicle and choose Edit if available.
+2. Use the add-vehicle action, or click its row in Inventory > Vehicles and choose Edit if available.
 3. Enter the identity, make, model, type, and other details requested by the form.
 4. Use the real registration and chassis information from reliable vehicle documents.
-5. Save and reopen the record to verify the saved information.
-6. Add or review documents and photos using the controls available on the vehicle record.
+5. For a new car, complete Arrival & inventory details: arrival date/time, source organization, custody, condition, and optional odometer/accessories. Assigned organization and current depot are also required. Select optional photos, videos and PDF documents.
+6. Click Register vehicle & add to inventory. Registration and inventory records are saved together.
+7. Reopen the record to verify its condition, location, custody, insurance and attached media.
+8. Select documents, photos and videos in the registration form before saving. If further files are needed later, use Edit in the same vehicle record.
 
-When adding a document, select its appropriate type and complete any dates or descriptions requested. Check the displayed attachment afterward. A vehicle already controlled by inventory may have restrictions on edits or status changes; use Inventory Management for the corresponding stock operation.
+When adding a document, attach the relevant PDF in the registration form. You can view saved files in Documents, Photos & Videos. Use Edit if further files are needed. A vehicle already controlled by inventory may have restrictions on edits or status changes; use Inventory Management for the corresponding stock operation.
 
-## 8 Receiving a vehicle into inventory
+## 8 Automatic inventory entry
 
-Before starting: have the registration number, vehicle details, source, receiving depot, current custodian, receiving date and time, condition, odometer reading, and supporting files ready.
+There is no separate Receive vehicle screen. New cars enter inventory when you submit Inventory Management > Register vehicle with their arrival and custody information.
 
-1. Open Inventory Management → Receive vehicle.
-2. Enter the registration number. Use the existing vehicle identity when it is already registered.
-3. Complete make, model, vehicle type, and assigned organization as requested.
-4. Enter Received date and time and Received from.
-5. Select the Receiving depot and the correct custodian type and current custodian.
-6. Record Initial condition, Odometer in kilometres, and accessories or equipment.
-7. Add factual remarks, especially for visible damage or missing items.
-8. Choose the initial photographs and supporting documents.
-9. Review and submit the receipt using the form's action. Confirm if prompted.
-10. Open the resulting inventory vehicle record and verify its receipt, depot, custody, condition, and evidence.
+1. Register the car using the combined form described in section 7.
+2. Open Inventory Management > Vehicles and search for its registration.
+3. Check its current depot, custodian, condition, and movement history.
+4. A car in good condition held at a depot becomes Available. A good car held by a vendor becomes At Vendor. Damaged cars become Damaged, and cars needing maintenance become Under Maintenance.
+5. Use Inventory Management for later reservations, transfers, movements, reconciliation, and reporting.
 
-Use photographs of the actual vehicle. Do not use a new registration spelling to get around a duplicate warning. Recording receipt does not mean the vehicle is automatically approved for every later operation.
+The system still retains receipt, custody and status history automatically for traceability. Do not enter the same car again. If a photo or video upload fails after registration, open the already-registered vehicle and add the missing files from Documents, Photos & Videos.
 
 ## 9 Finding inventory and reviewing its history
 
 1. Open Inventory Management → Vehicles.
 2. Search for a vehicle or filter by depot, status, custody, availability, or receipt dates as offered.
-3. Open the vehicle to review Identity and initial receiving and Current availability.
-4. Review reservations, assignment details, photographs, custody history, and chronological movement history.
-5. If permitted, attach further evidence to the correct record using the available upload controls.
+3. Click the vehicle row to open its full profile, insurance information and saved documents.
+4. Open Stock & custody to review reservations, assignment details, movement evidence, custody history, and chronological movement history.
+5. Attach registration documents, photos and videos in the registration/edit form. Optional evidence for later stock movements belongs under Stock & custody.
 
 Check the result: the vehicle identity, current location, custodian, and status agree with the physical facts. A missing vehicle may be on another results page or outside your filters or access. Check those before raising a new vehicle record.
 
 ## 10 Receiving several vehicles by bulk import
 
-For authorized stock staff. Use this for a prepared list rather than entering each receipt separately.
+For authorized stock staff. Use this for a prepared list rather than registering each car separately.
 
 1. Open Inventory Management → Bulk import.
 2. Review the file instructions shown on the screen. Ask your administrator for the agreed spreadsheet format if one has not been supplied.
@@ -336,7 +334,7 @@ Open the SLA tab to monitor target times and overdue work. An overdue label call
 
 Before starting: the ticket must have completed the required approvals, and eligible vehicles must be available.
 
-1. Open Vehicle Allocation and the approved ticket queue.
+1. Open Allocation, Dispatch & Trips > Approved requests.
 2. Select the ticket and review requested, already allocated, and pending quantities.
 3. Open the new allocation action for that ticket.
 4. Check Approved ticket, Source depot, Destination depot, Receiving organization or vendor, Transport partner, Planned dispatch, and Expected delivery as requested.
@@ -353,7 +351,7 @@ To cancel an undispatched allocation, open its cancellation action, record the r
 
 Purpose: record who is transporting the allocated vehicles, when they should arrive, and their departure evidence.
 
-1. Open the allocation and follow its dispatch action, or open Dispatch & Trips and create a plan for that allocation.
+1. Open the allocation and follow its dispatch action, or use Create dispatch in the same Allocation, Dispatch & Trips workspace.
 2. Select the vehicles to include. Only eligible items from the allocation can be used.
 3. Select the transport partner and driver, and enter the schedule and other requested journey details.
 4. Save the plan. A planned trip is created with the dispatch.
