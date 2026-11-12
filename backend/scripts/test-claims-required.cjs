@@ -2,7 +2,7 @@
 // Real multipart middleware and service, with database/storage replaced in memory.
 const assert = require('node:assert/strict');
 const express = require('express');
-const { createSchema } = require('../src/modules/claims/claims.validators.ts');
+const { createSchema, updateSchema } = require('../src/modules/claims/claims.validators.ts');
 const { claimsService } = require('../src/modules/claims/claims.service.ts');
 const { prisma } = require('../src/database/prisma.ts');
 const { storage } = require('../src/utils/storage/index.ts');
@@ -36,6 +36,19 @@ async function main() {
   }
   assert.equal(createSchema.parse({ ...fields, policeComplaint: 'false' }).policeComplaint, false); checks++;
   assert.equal(createSchema.parse(fields).policeComplaint, false); checks++;
+  assert.equal(Object.hasOwn(updateSchema.parse({ city: 'Updated city' }), 'thirdParties'), false); checks++;
+  assert.deepEqual(updateSchema.parse({ thirdParties: [] }).thirdParties, []); checks++;
+  const party = { type: 'TWO_WHEELER', name: 'Example Rider', phone: '9876543210', registrationNumber: 'TEST-123', damageDescription: 'Front wheel damaged', address: 'Example address', insurerName: 'Example insurer', policyNumber: 'POL-TEST' };
+  assert.deepEqual(createSchema.parse(fields).thirdParties, []); checks++;
+  assert.equal(createSchema.safeParse({ ...fields, incidentType: 'THIRD_PARTY' }).success, false); checks++;
+  for (const key of ['type', 'name', 'phone', 'registrationNumber', 'damageDescription']) {
+    const invalid = { ...party }; delete invalid[key];
+    assert.equal(createSchema.safeParse({ ...fields, thirdParties: [invalid] }).success, false, 'third party ' + key); checks++;
+  }
+  assert.equal(createSchema.safeParse({ ...fields, thirdParties: 'not json' }).success, false); checks++;
+  assert.equal(createSchema.safeParse({ ...fields, thirdParties: Array(11).fill(party) }).success, false); checks++;
+  assert.equal(createSchema.safeParse({ ...fields, thirdParties: [{ ...party, type: 'PEDESTRIAN', registrationNumber: '' }] }).success, true); checks++;
+  assert.equal(createSchema.safeParse({ ...fields, thirdParties: [party, { ...party, name: 'Second person' }] }).success, true); checks++;
   const server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -56,7 +69,25 @@ async function main() {
     assert.equal((await submit()).status, 500); assert.equal(commits, 1); assert.deepEqual(removed, ['test-file-1']); checks += 3;
     failSave = false; failTransaction = true; writes = 0; removed.length = 0;
     assert.equal((await submit()).status, 500); assert.equal(commits, 1); assert.deepEqual(removed.sort(), ['test-file-1', 'test-file-2']); checks += 3;
-    console.log(`PASS ${checks} required-field, multipart, optional-police and failure-cleanup assertions; no live database or storage writes.`);
+    failTransaction = false;
+    const thirdPartyResponse = await submit({ incidentType: 'THIRD_PARTY', thirdParties: JSON.stringify([party]) });
+    assert.equal(thirdPartyResponse.status, 201); const thirdPartyClaim = await thirdPartyResponse.json();
+    assert.deepEqual(thirdPartyClaim.thirdParties, [party]); checks += 2;
+    const previousWrites = writes;
+    assert.equal((await submit({ thirdParties: JSON.stringify([{ ...party, registrationNumber: '' }]) })).status, 422);
+    assert.equal(writes, previousWrites); checks += 2;
+    const evidenceOverrides = { thirdParties: JSON.stringify([party, { ...party, name: 'Second party' }]), thirdPartyFileCounts: JSON.stringify([1, 1]) };
+    const optionalEvidence = await submit(evidenceOverrides, ['image/png', 'video/mp4', 'image/png', 'video/mp4']);
+    assert.equal(optionalEvidence.status, 201);
+    const linked = (await optionalEvidence.json()).attachments.create;
+    assert.deepEqual(linked.map(file => file.caption), [null, null, 'Third party 1 evidence', 'Third party 2 evidence']); checks += 2;
+    const writesBeforeInvalid = writes;
+    assert.equal((await submit({ ...evidenceOverrides, thirdPartyFileCounts: '[2]' })).status, 400);
+    assert.equal((await submit({ ...evidenceOverrides, thirdPartyFileCounts: '[1,1]' })).status, 400);
+    assert.equal((await submit({ thirdPartyFileCounts: '[1]' })).status, 400);
+    assert.equal(writes, writesBeforeInvalid); checks += 4;
+    assert.equal((await submit({ thirdParties: JSON.stringify([party]), thirdPartyFileCounts: '[0]' })).status, 201); checks++;
+    console.log(`PASS ${checks} required-field, third-party persistence/validation and optional evidence linking, multipart, optional-police and failure-cleanup assertions; no live database or storage writes.`);
   } finally { await new Promise(resolve => server.close(resolve)); await prisma.$disconnect(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

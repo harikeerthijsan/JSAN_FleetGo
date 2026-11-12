@@ -83,6 +83,9 @@ export const claimsService = {
       prisma.insuranceClaim.groupBy({ by: ["incidentType"], where, _count: true }),
     ]);
     const payable = await prisma.insuranceClaim.aggregate({ where, _sum: { payableAmount: true, estimatedAmount: true } });
+    const currencyTotals = await prisma.insuranceClaim.groupBy({
+      by: ['currency'], where, _sum: { payableAmount: true, estimatedAmount: true }, orderBy: { currency: 'asc' },
+    });
     return {
       total,
       open,
@@ -90,6 +93,7 @@ export const claimsService = {
       closed,
       totalEstimated: payable._sum.estimatedAmount ?? 0,
       totalPayable: payable._sum.payableAmount ?? 0,
+      totalsByCurrency: currencyTotals.map((total) => ({ currency: total.currency, estimatedAmount: total._sum.estimatedAmount ?? 0, payableAmount: total._sum.payableAmount ?? 0 })),
       byDamageLevel: Object.fromEntries(byLevel.map((r) => [r.damageLevel, r._count])),
       byIncidentType: Object.fromEntries(byType.map((r) => [r.incidentType, r._count])),
     };
@@ -125,7 +129,12 @@ export const claimsService = {
   getById: (id: string, a: AuthenticatedUser) => load(id, a),
 
   async create(input: CreateInput, a: AuthenticatedUser, files: Express.Multer.File[]) {
-    if (!files.some((f) => f.mimetype.startsWith("image/")) || !files.some((f) => f.mimetype.startsWith("video/"))) {
+    const counts = input.thirdPartyFileCounts ?? [];
+    const thirdPartyFileCount = counts.reduce((sum, count) => sum + count, 0);
+    if ((counts.length && counts.length !== input.thirdParties.length) || thirdPartyFileCount > files.length)
+      throw ApiError.badRequest('Third-party evidence does not match the reported parties');
+    const incidentFiles = files.slice(0, files.length - thirdPartyFileCount);
+    if (!incidentFiles.some((f) => f.mimetype.startsWith("image/")) || !incidentFiles.some((f) => f.mimetype.startsWith("video/"))) {
       throw ApiError.badRequest("At least one photo and one video are required before submitting a claim");
     }
     const vehicle = await prisma.vehicle.findUnique({ where: { id: input.vehicleId }, select: { id: true, vendorId: true } });
@@ -133,12 +142,14 @@ export const claimsService = {
     // Claimant organization: the reporter's own org, else the vehicle's vendor.
     const organizationId = a.organizationId ?? vehicle.vendorId ?? null;
 
-    const storedFiles: { file: Express.Multer.File; key: string }[] = [];
+    const captions: (string | null)[] = incidentFiles.map(() => null);
+    counts.forEach((count, index) => { for (let i = 0; i < count; i++) captions.push(`Third party ${index + 1} evidence`); });
+    const storedFiles: { file: Express.Multer.File; key: string; caption: string | null }[] = [];
     try {
       const folder = `claims/${randomUUID()}`;
       for (const file of files) {
         const saved = await storage.save({ buffer: file.buffer, originalName: file.originalname, contentType: file.mimetype, folder });
-        storedFiles.push({ file, key: saved.key });
+        storedFiles.push({ file, key: saved.key, caption: captions[storedFiles.length] });
       }
       return await prisma.$transaction(async (tx) => {
         const claim = await tx.insuranceClaim.create({
@@ -156,17 +167,18 @@ export const claimsService = {
             policeComplaint: input.policeComplaint,
             policeComplaintNumber: input.policeComplaintNumber ?? null,
             policeStation: input.policeStation ?? null,
+            thirdParties: input.thirdParties,
             reportedById: a.id,
-            attachments: { create: storedFiles.map(({ file, key }) => ({
+            attachments: { create: storedFiles.map(({ file, key, caption }) => ({
               kind: file.mimetype.startsWith("image/") ? "PHOTO" as const : "VIDEO" as const,
               fileName: file.originalname, storageKey: key, contentType: file.mimetype,
-              size: file.size, uploadedById: a.id,
+              size: file.size, uploadedById: a.id, caption,
             })) },
           },
           include,
         });
         await logEvent(tx, claim.id, "CREATED", `Incident reported (${input.incidentType})`, a.id);
-        await logEvent(tx, claim.id, "EVIDENCE", `${files.length} required evidence files attached`, a.id);
+        await logEvent(tx, claim.id, "EVIDENCE", `${incidentFiles.length} incident evidence files and ${thirdPartyFileCount} optional third-party files attached`, a.id);
         return claim;
       });
     } catch (error) {
@@ -178,6 +190,9 @@ export const claimsService = {
   async update(id: string, input: UpdateInput, a: AuthenticatedUser) {
     const claim = await load(id, a);
     if (claim.status === "CLOSED") throw ApiError.conflict("A closed claim cannot be edited");
+    if ((input.incidentType ?? claim.incidentType) === 'THIRD_PARTY' &&
+        !(input.thirdParties ?? (Array.isArray(claim.thirdParties) ? claim.thirdParties : [])).length)
+      throw ApiError.badRequest('Add at least one third party for this incident type');
     return prisma.$transaction(async (tx) => {
       const updated = await tx.insuranceClaim.update({
         where: { id },
@@ -192,6 +207,7 @@ export const claimsService = {
           policeComplaint: input.policeComplaint,
           policeComplaintNumber: input.policeComplaintNumber,
           policeStation: input.policeStation,
+          thirdParties: input.thirdParties,
         },
         include,
       });
@@ -221,6 +237,7 @@ export const claimsService = {
       const updated = await tx.insuranceClaim.update({ where: { id }, data, include });
 
       const parts: string[] = [];
+      if (input.currency && input.currency !== claim.currency) parts.push(`currency ${claim.currency} -> ${updated.currency}`);
       if (input.status) parts.push(`status → ${input.status}`);
       if (input.insuranceStatus) parts.push(`insurance → ${input.insuranceStatus}`);
       if (input.approvedPercentage !== undefined) parts.push(`${input.approvedPercentage}% approved`);

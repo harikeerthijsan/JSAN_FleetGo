@@ -98,7 +98,7 @@
 .fg-claim__section-heading h2 { font-size: 15px; color: var(--text-primary); font-weight: 600; margin: 0 0 5px; }
 .fg-claim__section-heading p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
 .fg-claim__actions { align-items: center; gap: 12px; margin: 20px 0 0; }
-.fg-claim__detail-grid { display: grid; grid-template-columns: minmax(0,1.08fr) minmax(0,1fr); grid-template-areas: 'incident processing' 'evidence processing' 'history history'; align-items: start; gap: 22px; }
+.fg-claim__detail-grid { display: grid; grid-template-columns: minmax(0,1.08fr) minmax(0,1fr); grid-template-areas: 'incident processing' 'thirdparty processing' 'evidence processing' 'history history'; align-items: start; gap: 22px; }
 .fg-claim__incident { grid-area: incident; }
 .fg-claim__evidence { grid-area: evidence; }
 .fg-claim__processing { grid-area: processing; }
@@ -130,7 +130,7 @@
 .fg-claim__pay { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 20px 0; padding: 18px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
 .fg-claim__pay .fg-field__label { font-size: 11px; }
 @media (max-width:1200px) { .fg-claim__metrics { grid-template-columns: repeat(3,minmax(0,1fr)); } .fg-claim__filters { grid-template-columns: 1fr 1fr; } .fg-claim__filters > a { justify-self: end; } }
-@media (max-width:1000px) { .fg-claim__detail-grid { grid-template-columns: minmax(0,1fr); grid-template-areas: 'incident' 'evidence' 'processing' 'history'; } }
+@media (max-width:1000px) { .fg-claim__detail-grid { grid-template-columns: minmax(0,1fr); grid-template-areas: 'incident' 'thirdparty' 'evidence' 'processing' 'history'; } }
 @media (max-width:560px) {
  .fg-claim { gap: 18px; }
  .fg-claim__metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
@@ -141,3 +141,16 @@
  .fg-claim__timeline li { grid-template-columns: minmax(0,1fr); gap: 5px; }
  .fg-claim__kv { grid-template-columns: minmax(80px,.7fr) minmax(0,1.3fr); }
 }
+
+.fg-claim__third-party { margin: 16px 0; padding: 18px; border: 1px solid var(--border-color); border-radius: 12px; min-width: 0; background: var(--surface-card); overflow-wrap: anywhere; }
+.fg-claim__third-party legend { padding: 0 6px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.fg-claim__third-party h3 { font-size: 14px; margin-bottom: 14px; }
+.fg-claim__third-party > .fg-field { margin-top: 14px; }
+@media (max-width:560px) { .fg-claim__third-party { padding: 14px; } }
+
+.fg-claim__third-parties { grid-area: thirdparty; }
+
+.fg-claim__currency-totals { display: flex; flex-direction: column; gap: 5px; font-size: 22px; line-height: 1.3; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+
+.fg-claim__party-media { margin-top: 16px; }
+.fg-claim__party-media small { overflow-wrap: anywhere; }

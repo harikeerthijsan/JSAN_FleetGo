@@ -32,10 +32,10 @@ export const claimApi = {
     return { data: r.data.data, meta: r.data.meta as unknown as PaginatedMeta };
   },
   getById: (id: string) => get<InsuranceClaim>(`/claims/${id}`),
-  create: async (body: Record<string, unknown>, photos: File[], videos: File[]) => {
+  create: async (body: Record<string, unknown>, photos: File[], videos: File[], thirdPartyFiles: File[] = []) => {
     const data = new FormData();
-    for (const [key, value] of Object.entries(body)) if (value !== undefined && value !== null) data.append(key, String(value));
-    for (const file of [...photos, ...videos]) data.append("files", file);
+    for (const [key, value] of Object.entries(body)) if (value !== undefined && value !== null) data.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+    for (const file of [...photos, ...videos, ...thirdPartyFiles]) data.append("files", file);
     return (await apiClient.post<ApiSuccess<InsuranceClaim>>("/claims", data)).data.data;
   },
   update: async (id: string, body: unknown) => (await apiClient.put<ApiSuccess<InsuranceClaim>>(`/claims/${id}`, body)).data.data,

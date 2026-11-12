@@ -39,7 +39,19 @@ export interface ClaimEvent {
   createdAt: string;
 }
 
+export interface ClaimThirdParty {
+  type: 'TWO_WHEELER' | 'CAR' | 'COMMERCIAL_VEHICLE' | 'OTHER_VEHICLE' | 'PEDESTRIAN' | 'PROPERTY' | 'OTHER';
+  name: string;
+  phone: string;
+  address?: string;
+  registrationNumber?: string;
+  damageDescription: string;
+  insurerName?: string;
+  policyNumber?: string;
+}
+
 export interface InsuranceClaim {
+  thirdParties?: ClaimThirdParty[];
   id: string;
   reference: string;
   vehicleId: string;
@@ -83,6 +95,7 @@ export interface ClaimLookups {
 }
 
 export interface ClaimDashboard {
+  totalsByCurrency?: { currency: string; estimatedAmount: number; payableAmount: number }[];
   total: number;
   open: number;
   wip: number;

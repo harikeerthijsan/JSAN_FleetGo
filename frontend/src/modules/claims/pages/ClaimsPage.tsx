@@ -23,6 +23,7 @@ import type {
   ClaimEvent,
   ClaimLookups,
   InsuranceClaim,
+  ClaimThirdParty,
 } from "@/types/claim";
 import "../Claims.css";
 
@@ -84,7 +85,7 @@ function ClaimsList({ lookups }: { lookups: ClaimLookups | null }) {
             {([["All claims", dash.total], ["Open", dash.open], ["In progress", dash.wip], ["Closed", dash.closed]] as [string, number][]).map(([l, v], index) => (
               <div key={l} className={`fg-claim__metric fg-claim__metric--${index}`}><span className="fg-claim__metric-label">{l}<Icon name={index === 1 ? 'alert' : index === 3 ? 'fleet' : 'reports'} size={17} /></span><span className="fg-claim__metric-value">{v}</span><span className="fg-claim__metric-caption">{['In your authorized scope', 'Awaiting attention', 'Being processed', 'Completed cases'][index]}</span></div>
             ))}
-            <div className="fg-claim__metric fg-claim__metric--payable"><span className="fg-claim__metric-label">Total payable<Icon name="reports" size={17} /></span><span className="fg-claim__metric-value">{dash.totalPayable.toLocaleString()}</span><span className="fg-claim__metric-caption">Recorded claim amounts</span></div>
+            <div className="fg-claim__metric fg-claim__metric--payable"><span className="fg-claim__metric-label">Total payable<Icon name="reports" size={17} /></span><div className="fg-claim__currency-totals">{dash.totalsByCurrency?.length ? dash.totalsByCurrency.map((total) => <span key={total.currency}>{money(total.currency, total.payableAmount)}</span>) : <span>{dash.totalPayable.toLocaleString()}</span>}</div><span className="fg-claim__metric-caption">Recorded amounts, grouped by currency</span></div>
           </div>
         </section>
       ) : null}
@@ -124,12 +125,20 @@ function ClaimsList({ lookups }: { lookups: ClaimLookups | null }) {
 // ---------------------------------------------------------------------------
 // Report form
 // ---------------------------------------------------------------------------
+const THIRD_PARTY_TYPES = ['TWO_WHEELER', 'CAR', 'COMMERCIAL_VEHICLE', 'OTHER_VEHICLE', 'PEDESTRIAN', 'PROPERTY', 'OTHER'] as const;
+const blankThirdParty = (): ClaimThirdParty & { uploadKey: string } => ({ uploadKey: crypto.randomUUID(), type: 'TWO_WHEELER', name: '', phone: '', address: '', registrationNumber: '', damageDescription: '', insurerName: '', policyNumber: '' });
+const isThirdPartyVehicle = (type: string) => ['TWO_WHEELER', 'CAR', 'COMMERCIAL_VEHICLE', 'OTHER_VEHICLE'].includes(type);
 function ReportForm({ lookups }: { lookups: ClaimLookups | null }) {
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [form, setForm] = useState({ vehicleId: "", incidentType: "ACCIDENT", category: "", city: "", location: "", incidentDate: "", damageLevel: "MEDIUM", description: "", policeComplaint: false, policeComplaintNumber: "", policeStation: "" });
   const [photos, setPhotos] = useState<File[]>([]);
   const [videos, setVideos] = useState<File[]>([]);
+  const [involved, setInvolved] = useState(false);
+  const [thirdParties, setThirdParties] = useState<(ClaimThirdParty & { uploadKey: string })[]>([blankThirdParty()]);
+  const [partyMedia, setPartyMedia] = useState<Record<string, { photos: File[]; videos: File[] }>>({});
+  const thirdPartyInvolved = involved || form.incidentType === 'THIRD_PARTY';
+  const setParty = (index: number, key: keyof ClaimThirdParty, value: string) => setThirdParties((parties) => parties.map((party, i) => i === index ? { ...party, [key]: value } : party));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = (k: keyof typeof form, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
@@ -137,20 +146,24 @@ function ReportForm({ lookups }: { lookups: ClaimLookups | null }) {
   useEffect(() => { fleetService.list({ pageSize: 200 }).then((r) => setVehicles(r.data)).catch(() => undefined); }, []);
 
   const requiredFields = [form.vehicleId, form.incidentType, form.damageLevel, form.category, form.city, form.location, form.incidentDate];
-  const complete = requiredFields.every((value) => value.trim().length > 0) && form.description.trim().length >= 3 && photos.length > 0 && videos.length > 0;
+  const partiesComplete = !thirdPartyInvolved || thirdParties.every((party) => party.name.trim() && party.phone.trim().length >= 5 && party.damageDescription.trim().length >= 3 && (!isThirdPartyVehicle(party.type) || party.registrationNumber?.trim()));
+  const complete = requiredFields.every((value) => value.trim().length > 0) && form.description.trim().length >= 3 && photos.length > 0 && videos.length > 0 && partiesComplete;
 
+  const optionalPartyFiles = thirdPartyInvolved ? thirdParties.flatMap((party) => [...(partyMedia[party.uploadKey]?.photos ?? []), ...(partyMedia[party.uploadKey]?.videos ?? [])]) : [];
   const submit = async () => {
-    if (!complete || busy) { setError("Complete every incident field and select at least one photo and one video. Police information is optional."); return; }
-    if ([...photos, ...videos].length > 10 || [...photos, ...videos].reduce((total, file) => total + file.size, 0) > 104_857_600) { setError("Select up to 10 files totalling 100 MB or less."); return; }
+    if (!complete || busy) { setError("Complete the incident and required third-party details, and select at least one photo and one video. Police information is optional."); return; }
+    if ([...photos, ...videos, ...optionalPartyFiles].length > 10 || [...photos, ...videos, ...optionalPartyFiles].reduce((total, file) => total + file.size, 0) > 104_857_600) { setError("Select up to 10 files totalling 100 MB or less, including third-party uploads."); return; }
     setBusy(true); setError("");
     try {
       const body: Record<string, unknown> = {
         vehicleId: form.vehicleId, incidentType: form.incidentType, damageLevel: form.damageLevel,
         description: form.description, policeComplaint: form.policeComplaint,
+        thirdParties: thirdPartyInvolved ? thirdParties.map(({ uploadKey: _uploadKey, ...party }) => ({ ...party, registrationNumber: isThirdPartyVehicle(party.type) ? party.registrationNumber : '' })) : [],
+        thirdPartyFileCounts: thirdPartyInvolved ? thirdParties.map((party) => (partyMedia[party.uploadKey]?.photos.length ?? 0) + (partyMedia[party.uploadKey]?.videos.length ?? 0)) : [],
       };
       for (const k of ["category", "city", "location", "incidentDate", "policeComplaintNumber", "policeStation"] as const)
         if (form[k]) body[k] = form[k];
-      const claim = await claimApi.create(body, photos, videos);
+      const claim = await claimApi.create(body, photos, videos, optionalPartyFiles);
       navigate(`/claims/${claim.id}`);
     } catch (e) {
       setError(errText(e));
@@ -173,14 +186,48 @@ function ReportForm({ lookups }: { lookups: ClaimLookups | null }) {
       </div>
       <FormInput label="What happened?" value={form.description} minLength={3} onChange={(e) => set("description", e.target.value)} required />
 
-      <div className="fg-claim__section-heading"><span>02</span><div><h2>Police information <small>(optional)</small></h2><p>Add complaint details if a report has been filed.</p></div></div>
+      <div className="fg-claim__section-heading"><span>02</span><div><h2>Third-party involvement</h2><p>Record any other person, vehicle or property affected by this incident.</p></div></div>
+      <label className="fg-claim__check"><input type="checkbox" checked={thirdPartyInvolved} disabled={form.incidentType === 'THIRD_PARTY'} onChange={(e) => setInvolved(e.target.checked)} /> Another person, vehicle or property was involved</label>
+      {form.incidentType === 'THIRD_PARTY' ? <p className="fg-claim__metric-label">Third-party details are required for the selected incident type.</p> : null}
+      {thirdPartyInvolved ? <>
+        {thirdParties.map((party, index) => <fieldset className="fg-claim__third-party" key={party.uploadKey}>
+          <legend>Third party {index + 1}</legend>
+          <div className="fg-claim__form">
+            <Select label="Party / vehicle type" required value={party.type} options={THIRD_PARTY_TYPES.map((type) => ({ label: human(type), value: type }))} onChange={(e) => setParty(index, 'type', e.target.value)} />
+            <FormInput label="Person / owner name" required maxLength={150} value={party.name} onChange={(e) => setParty(index, 'name', e.target.value)} />
+            <FormInput label="Contact number" type="tel" required minLength={5} maxLength={40} value={party.phone} onChange={(e) => setParty(index, 'phone', e.target.value)} />
+            {isThirdPartyVehicle(party.type) ? <FormInput label="Third-party vehicle registration" required maxLength={40} value={party.registrationNumber ?? ''} onChange={(e) => setParty(index, 'registrationNumber', e.target.value)} /> : null}
+            <FormInput label="Address (optional)" maxLength={300} value={party.address ?? ''} onChange={(e) => setParty(index, 'address', e.target.value)} />
+            <FormInput label="Third-party insurer (optional)" maxLength={150} value={party.insurerName ?? ''} onChange={(e) => setParty(index, 'insurerName', e.target.value)} />
+            <FormInput label="Third-party policy number (optional)" maxLength={80} value={party.policyNumber ?? ''} onChange={(e) => setParty(index, 'policyNumber', e.target.value)} />
+          </div>
+          <FormInput label="Third-party damage / injuries" required minLength={3} maxLength={2000} value={party.damageDescription} onChange={(e) => setParty(index, 'damageDescription', e.target.value)} placeholder="Describe damage or injuries; enter None if there were none." />
+          <div className="fg-claim__form fg-claim__party-media">
+            {(['photos', 'videos'] as const).map((kind) => <label className="fg-claim__file" key={kind}>
+              <span>Third-party {kind} (optional)</span>
+              <input aria-label={`Third party ${index + 1} ${kind} (optional)`} type="file" accept={kind === 'photos' ? 'image/*' : 'video/*'} multiple onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                setPartyMedia((media) => ({ ...media, [party.uploadKey]: { photos: media[party.uploadKey]?.photos ?? [], videos: media[party.uploadKey]?.videos ?? [], [kind]: files } }));
+              }} />
+              {partyMedia[party.uploadKey]?.[kind].length ? <small>{partyMedia[party.uploadKey][kind].map((file) => file.name).join(', ')}</small> : null}
+            </label>)}
+          </div>
+          {thirdParties.length > 1 ? <Button variant="ghost" onClick={() => {
+            setThirdParties((parties) => parties.filter((_, i) => i !== index));
+            setPartyMedia((media) => { const remaining = { ...media }; delete remaining[party.uploadKey]; return remaining; });
+          }}>Remove third party {index + 1}</Button> : null}
+        </fieldset>)}
+        <Button variant="secondary" disabled={thirdParties.length >= 10} onClick={() => setThirdParties((parties) => [...parties, blankThirdParty()])}>Add another third party</Button>
+      </> : null}
+
+      <div className="fg-claim__section-heading"><span>03</span><div><h2>Police information <small>(optional)</small></h2><p>Add complaint details if a report has been filed.</p></div></div>
       <div className="fg-claim__form" style={{ marginTop: "0.75rem" }}>
         <label className="fg-claim__check"><input type="checkbox" checked={form.policeComplaint} onChange={(e) => set("policeComplaint", e.target.checked)} /> Police complaint filed</label>
         {form.policeComplaint ? <FormInput label="Complaint / FIR number" value={form.policeComplaintNumber} onChange={(e) => set("policeComplaintNumber", e.target.value)} /> : null}
         {form.policeComplaint ? <FormInput label="Police station" value={form.policeStation} onChange={(e) => set("policeStation", e.target.value)} /> : null}
       </div>
 
-      <div className="fg-claim__section-heading"><span>03</span><div><h2>Supporting evidence</h2><p>At least one photo and one video are required. Up to 10 files, 100 MB total.</p></div></div>
+      <div className="fg-claim__section-heading"><span>04</span><div><h2>Supporting evidence</h2><p>At least one photo and one video are required. Up to 10 files, 100 MB total, including optional third-party uploads.</p></div></div>
       <div className="fg-claim__form">
         <label className="fg-claim__file"><span>Photos of damage <span className="fg-field__required">*</span></span><input required type="file" accept="image/*" multiple onChange={(e) => setPhotos(Array.from(e.target.files ?? []))} />{photos.length ? <small>{photos.length} selected</small> : null}</label>
         <label className="fg-claim__file"><span>Videos of damage <span className="fg-field__required">*</span></span><input required type="file" accept="video/*" multiple onChange={(e) => setVideos(Array.from(e.target.files ?? []))} />{videos.length ? <small>{videos.length} selected</small> : null}</label>
@@ -263,10 +310,27 @@ function ClaimDetail({ lookups }: { lookups: ClaimLookups | null }) {
         </dl>
       </Card>
 
-      <Card className="fg-claim__evidence" title="Damage evidence" subtitle="Photos and videos attached to this incident.">
-        {claim.attachments && claim.attachments.length ? (
+      <Card className="fg-claim__third-parties" title="Third-party details" subtitle="Other people, vehicles or property involved in this incident.">
+        {claim.thirdParties?.length ? claim.thirdParties.map((party, index) => <section className="fg-claim__third-party" key={index} aria-label={`Third party ${index + 1}`}>
+          <h3>Third party {index + 1} · {human(party.type)}</h3>
+          <dl className="fg-claim__kv">
+            <dt>Person / owner</dt><dd>{party.name}</dd><dt>Contact number</dt><dd>{party.phone}</dd>
+            {party.registrationNumber ? <><dt>Vehicle registration</dt><dd>{party.registrationNumber}</dd></> : null}
+            {party.address ? <><dt>Address</dt><dd>{party.address}</dd></> : null}
+            <dt>Damage / injuries</dt><dd>{party.damageDescription}</dd>
+            {party.insurerName ? <><dt>Insurer</dt><dd>{party.insurerName}</dd></> : null}
+            {party.policyNumber ? <><dt>Policy number</dt><dd>{party.policyNumber}</dd></> : null}
+          </dl>
           <div className="fg-claim__gallery">
-            {claim.attachments.map((a) => <EvidenceThumb key={a.id} claimId={claim.id} att={a} />)}
+            {claim.attachments?.filter((attachment) => attachment.caption === `Third party ${index + 1} evidence`).map((attachment) => <EvidenceThumb key={attachment.id} claimId={claim.id} att={attachment} />)}
+          </div>
+        </section>) : <p>No third-party involvement recorded.</p>}
+      </Card>
+
+      <Card className="fg-claim__evidence" title="Damage evidence" subtitle="Photos and videos attached to this incident.">
+        {claim.attachments?.some((attachment) => !/^Third party \d+ evidence$/.test(attachment.caption ?? '')) ? (
+          <div className="fg-claim__gallery">
+            {claim.attachments.filter((attachment) => !/^Third party \d+ evidence$/.test(attachment.caption ?? '')).map((a) => <EvidenceThumb key={a.id} claimId={claim.id} att={a} />)}
           </div>
         ) : <p className="fg-claim__metric-label">No photos or videos attached.</p>}
         {lookups?.canReport && claim.status !== "CLOSED" ? (
@@ -305,6 +369,16 @@ function ClaimDetail({ lookups }: { lookups: ClaimLookups | null }) {
 }
 
 function ProcessPanel({ claim, lookups, onDone, reload }: { claim: InsuranceClaim; lookups: ClaimLookups | null; onDone: (m: string) => void; reload: () => void }) {
+  const currencies = [
+    { value: 'INR', label: 'INR - Indian rupee' }, { value: 'USD', label: 'USD - US dollar' },
+    { value: 'EUR', label: 'EUR - Euro' }, { value: 'GBP', label: 'GBP - British pound' },
+    { value: 'AED', label: 'AED - UAE dirham' }, { value: 'AUD', label: 'AUD - Australian dollar' },
+    { value: 'CAD', label: 'CAD - Canadian dollar' }, { value: 'SGD', label: 'SGD - Singapore dollar' },
+    { value: 'JPY', label: 'JPY - Japanese yen' }, { value: 'NZD', label: 'NZD - New Zealand dollar' },
+    { value: 'SAR', label: 'SAR - Saudi riyal' }, { value: 'CHF', label: 'CHF - Swiss franc' },
+    { value: 'CNY', label: 'CNY - Chinese yuan' }, { value: 'ZAR', label: 'ZAR - South African rand' },
+  ];
+  if (claim.currency && !currencies.some((currency) => currency.value === claim.currency)) currencies.push({ value: claim.currency, label: claim.currency });
   const [form, setForm] = useState({
     status: claim.status,
     insuranceStatus: claim.insuranceStatus,
@@ -314,6 +388,7 @@ function ProcessPanel({ claim, lookups, onDone, reload }: { claim: InsuranceClai
     estimatedAmount: claim.estimatedAmount?.toString() ?? "",
     approvedPercentage: claim.approvedPercentage?.toString() ?? "",
     payableAmount: claim.payableAmount?.toString() ?? "",
+    currency: claim.currency || 'INR',
     note: "",
   });
   const [busy, setBusy] = useState(false);
@@ -323,7 +398,7 @@ function ProcessPanel({ claim, lookups, onDone, reload }: { claim: InsuranceClai
   const save = async () => {
     setBusy(true); setError("");
     try {
-      const body: Record<string, unknown> = { status: form.status, insuranceStatus: form.insuranceStatus };
+      const body: Record<string, unknown> = { status: form.status, insuranceStatus: form.insuranceStatus, currency: form.currency };
       if (form.insurerName) body.insurerName = form.insurerName;
       if (form.policyNumber) body.policyNumber = form.policyNumber;
       if (form.insurerClaimRef) body.insurerClaimRef = form.insurerClaimRef;
@@ -356,10 +431,12 @@ function ProcessPanel({ claim, lookups, onDone, reload }: { claim: InsuranceClai
         <FormInput label="Policy number" value={form.policyNumber} onChange={(e) => set("policyNumber", e.target.value)} />
         <FormInput label="Insurer claim ref" value={form.insurerClaimRef} onChange={(e) => set("insurerClaimRef", e.target.value)} />
       </div>
+      <Select label="Claim currency" required value={form.currency} options={currencies} onChange={(e) => set('currency', e.target.value)} />
+      <p className="fg-claim__metric-label">Both amounts use this currency. Changing currency does not convert the amounts.</p>
       <div className="fg-claim__pay">
-        <FormInput label={`Estimated damage (${claim.currency})`} type="number" value={form.estimatedAmount} onChange={(e) => set("estimatedAmount", e.target.value)} />
+        <FormInput label={`Estimated damage (${form.currency})`} type="number" min={0} step="any" value={form.estimatedAmount} onChange={(e) => set("estimatedAmount", e.target.value)} />
         <FormInput label="Approved %" type="number" value={form.approvedPercentage} onChange={(e) => set("approvedPercentage", e.target.value)} />
-        <FormInput label={`Payable (${claim.currency})`} type="number" value={form.payableAmount} onChange={(e) => set("payableAmount", e.target.value)} />
+        <FormInput label={`Payable (${form.currency})`} type="number" min={0} step="any" value={form.payableAmount} onChange={(e) => set("payableAmount", e.target.value)} />
       </div>
       <FormInput label="Note (optional)" value={form.note} onChange={(e) => set("note", e.target.value)} />
       {error ? <p className="fg-claim__error" role="alert">{error}</p> : null}

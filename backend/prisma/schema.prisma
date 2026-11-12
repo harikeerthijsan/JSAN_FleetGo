@@ -2737,6 +2737,7 @@ model InsuranceClaim {
   policeComplaint       Boolean @default(false)
   policeComplaintNumber String?
   policeStation         String?
+  thirdParties          Json @default("[]")
 
   // Receiver / insurer side.
   status           ClaimStatus          @default(OPEN)
