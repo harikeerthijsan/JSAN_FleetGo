@@ -1,6 +1,5 @@
 import { EntityStatus } from '@prisma/client';
-import { ZodError, z, type ZodSchema } from 'zod';
-import {partialSchema} from '../../utils/partialSchema';
+import { ZodError, type ZodSchema } from 'zod';
 import { prisma } from '../../database/prisma';
 import { ApiError } from '../../utils/ApiError';
 import type { PaginationMeta } from '../../utils/ApiResponse';
@@ -185,7 +184,7 @@ export const RESOURCE_KEYS = Object.keys(RESOURCES);
 
 function parse(schema: ZodSchema, body: unknown, partial = false) {
   try {
-    const s = partial && 'partial' in schema ? partialSchema(schema as z.ZodObject<z.ZodRawShape>) : schema;
+    const s = partial && 'partial' in schema ? (schema as never as { partial: () => ZodSchema }).partial() : schema;
     return s.parse(body) as Record<string, unknown>;
   } catch (err) {
     if (err instanceof ZodError) {

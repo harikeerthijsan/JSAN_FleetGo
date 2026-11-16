@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import {
   CustodianType,
   MovementType,
@@ -153,7 +153,7 @@ export const reviewSchema = z.object({
   comment: text.min(1),
 });
 export const importSchema = z.object({
-  rows: z.array(z.record(z.string(), z.unknown())).min(1).max(1000),
+  rows: z.array(z.record(z.unknown())).min(1).max(1000),
 });
 export type ReceiptInput = z.infer<typeof receiptSchema>;
 export type InventoryQuery = z.infer<typeof listSchema>;

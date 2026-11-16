@@ -367,7 +367,6 @@ async function seedTicketing() {
 }
 
 async function main() {
-  if(process.env.NODE_ENV==='production')throw new Error('Demo seed is disabled in production. Use npm run production:bootstrap.');
   console.log('Seeding FleetGo database…');
   await seedPermissions();
   await seedRoles();

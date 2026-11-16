@@ -150,7 +150,7 @@ const savedSchema = z.object({
   category: z.string().trim().min(1).max(40),
   reportType: z.string().trim().min(1).max(40),
   description: z.string().trim().max(1000).optional(),
-  filters: z.record(z.string(), z.unknown()).optional(),
+  filters: z.record(z.unknown()).optional(),
   isShared: z.boolean().optional(),
 });
 reportsRoutes.get(

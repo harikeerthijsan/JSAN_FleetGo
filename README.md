@@ -1,8 +1,5 @@
 # FleetGo
 
-> **Railway production hosting:** follow [DEPLOY.md](DEPLOY.md) and the root [.env.example](.env.example). The image serves the UI/API/WebSocket together, uses a PostgreSQL pre-deploy migration/bootstrap, and requires an upload volume at /data. Production never runs the demo seed. See [verification and remaining deployment setup](docs/RAILWAY_READINESS.md).
-
-
 **Enterprise Fleet Logistics Management Platform — CTS–Google Engagement**
 
 FleetGo is a centralized platform for managing the complete vehicle lifecycle:

@@ -225,7 +225,7 @@ export const handoverSchema = z.object({
   receivedByUserId: z.string().uuid().optional(),
   receivedByName: optionalText(150),
   receivedParty: optionalText(200),
-  checklist: z.record(z.string(), z.unknown()).optional(),
+  checklist: z.record(z.unknown()).optional(),
   remarks: optionalText(2000),
 });
 export type HandoverInput = z.infer<typeof handoverSchema>;

@@ -45,5 +45,5 @@ export const errorHandler = (
   // Never leak internal error details/stack traces in production.
   const safeDetails = config.app.isProduction && statusCode >= 500 ? undefined : details;
 
-  ApiResponse.error(res, statusCode, config.app.isProduction && statusCode >= 500 ? 'Internal Server Error' : message, safeDetails);
+  ApiResponse.error(res, statusCode, message, safeDetails);
 };

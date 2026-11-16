@@ -16,14 +16,6 @@ const envSchema = z.object({
   APP_NAME: z.string().default('FleetGo'),
   PORT: z.coerce.number().int().positive().default(4000),
   API_PREFIX: z.string().default('/api/v1'),
-  APP_PUBLIC_URL: z.string().optional(),
-  RAILWAY_PUBLIC_DOMAIN: z.string().optional(),
-  TRUST_PROXY_HOPS: z.coerce
-    .number()
-    .int()
-    .min(0)
-    .max(5)
-    .default(process.env.NODE_ENV === 'production' ? 1 : 0),
 
   DATABASE_URL: z
     .string()
@@ -33,7 +25,7 @@ const envSchema = z.object({
 
   LOG_LEVEL: z
     .enum(['error', 'warn', 'info', 'http', 'debug'])
-    .default(process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+    .default('debug'),
 
   // --- Authentication (Phase 2) -------------------------------------------
   // Access tokens are short-lived JWTs; refresh tokens are opaque random
@@ -51,10 +43,8 @@ const envSchema = z.object({
   REFRESH_COOKIE_NAME: z.string().default('fg_refresh'),
   // Force the Secure cookie flag (otherwise derived from NODE_ENV=production)
   COOKIE_SECURE: z
-    .preprocess(
-      (v) => (v === '' ? undefined : v),
-      z.enum(['true', 'false']).optional(),
-    )
+    .enum(['true', 'false'])
+    .optional()
     .transform((v) => (v === undefined ? undefined : v === 'true')),
   // SameSite policy for the refresh cookie
   COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
@@ -81,15 +71,6 @@ const envSchema = z.object({
   STORAGE_ACCESS_KEY: z.string().optional(),
   STORAGE_SECRET_KEY: z.string().optional(),
   STORAGE_MAX_FILE_SIZE: z.coerce.number().int().positive().default(10_485_760),
-  SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
-  SMTP_SECURE: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((v) => v === 'true'),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASSWORD: z.string().optional(),
-  MAIL_FROM: z.string().optional(),
 
   // --- WebSocket — readiness only -----------------------------------------
   WS_ENABLED: z
@@ -99,92 +80,7 @@ const envSchema = z.object({
   WS_PATH: z.string().default('/ws'),
 });
 
-export const configurationSchema = envSchema.superRefine((value, ctx) => {
-  const issue = (path: string, message: string) =>
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
-  if (value.APP_PUBLIC_URL) {
-    try {
-      const url = new URL(value.APP_PUBLIC_URL);
-      if (
-        !['http:', 'https:'].includes(url.protocol) ||
-        url.username ||
-        url.password ||
-        url.pathname !== '/' ||
-        url.search ||
-        url.hash
-      )
-        issue(
-          'APP_PUBLIC_URL',
-          'Must be an HTTP(S) origin without a path or credentials',
-        );
-    } catch {
-      issue('APP_PUBLIC_URL', 'Must be a valid HTTP(S) origin');
-    }
-  }
-  if (Boolean(value.SMTP_USER) !== Boolean(value.SMTP_PASSWORD))
-    issue(
-      'SMTP_USER',
-      'SMTP_USER and SMTP_PASSWORD must be configured together',
-    );
-  if (value.SMTP_HOST && !value.MAIL_FROM)
-    issue('MAIL_FROM', 'Required when SMTP is configured');
-  if (value.COOKIE_SAMESITE === 'none' && value.COOKIE_SECURE === false)
-    issue('COOKIE_SECURE', 'SameSite=none requires secure cookies');
-  if (value.NODE_ENV !== 'production') return;
-  for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
-    if (
-      value[key].length < 32 ||
-      /change.?me|replace.?me|development|your.secret/i.test(value[key])
-    )
-      issue(
-        key,
-        'Production secrets must be independently generated, at least 32 characters, without placeholder values',
-      );
-  }
-  if (value.JWT_ACCESS_SECRET === value.JWT_REFRESH_SECRET)
-    issue('JWT_REFRESH_SECRET', 'Access and refresh secrets must differ');
-  if (value.COOKIE_SECURE === false)
-    issue('COOKIE_SECURE', 'Secure cookies are required in production');
-  const origins = (
-    value.APP_PUBLIC_URL ||
-    (value.RAILWAY_PUBLIC_DOMAIN
-      ? 'https://' + value.RAILWAY_PUBLIC_DOMAIN
-      : value.CORS_ORIGINS)
-  ).split(',');
-  const explicitCors = process.env.CORS_ORIGINS
-    ? value.CORS_ORIGINS.split(',')
-    : [];
-  for (const origin of [...origins, ...explicitCors]) {
-    try {
-      const url = new URL(origin.trim());
-      if (
-        url.protocol !== 'https:' ||
-        url.origin !== origin.trim() ||
-        url.username ||
-        url.password ||
-        ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
-      )
-        throw Error();
-    } catch {
-      issue(
-        'APP_PUBLIC_URL',
-        'Production requires exact public HTTPS origins via APP_PUBLIC_URL / RAILWAY_PUBLIC_DOMAIN / CORS_ORIGINS',
-      );
-    }
-  }
-  if (value.STORAGE_DRIVER !== 'local')
-    issue(
-      'STORAGE_DRIVER',
-      'Only local storage is implemented; attach a persistent volume instead of selecting an unsupported driver',
-    );
-  if (!/^(\/|[A-Za-z]:[\\/])/.test(value.STORAGE_LOCAL_PATH))
-    issue(
-      'STORAGE_LOCAL_PATH',
-      'Production requires an absolute path on persistent storage',
-    );
-});
-
-const parsed = configurationSchema.safeParse(process.env);
+const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   // Fail fast with a readable message rather than crashing later in some

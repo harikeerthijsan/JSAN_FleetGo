@@ -13,25 +13,12 @@ export const config = {
     apiPrefix: env.API_PREFIX,
     isProduction: env.NODE_ENV === 'production',
     isDevelopment: env.NODE_ENV === 'development',
-    publicUrl:
-      env.APP_PUBLIC_URL ||
-      (env.RAILWAY_PUBLIC_DOMAIN
-        ? `https://${env.RAILWAY_PUBLIC_DOMAIN}`
-        : undefined),
-    trustProxyHops: env.TRUST_PROXY_HOPS,
   },
   database: {
     url: env.DATABASE_URL,
   },
   cors: {
-    origins: (
-      process.env.CORS_ORIGINS ||
-      env.APP_PUBLIC_URL ||
-      (env.RAILWAY_PUBLIC_DOMAIN
-        ? `https://${env.RAILWAY_PUBLIC_DOMAIN}`
-        : env.CORS_ORIGINS)
-    )
-      .split(',')
+    origins: env.CORS_ORIGINS.split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
   },
@@ -52,7 +39,8 @@ export const config = {
     cookie: {
       name: env.REFRESH_COOKIE_NAME,
       // Secure flag: explicit override wins, otherwise on in production.
-      secure: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
+      secure:
+        env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
       sameSite: env.COOKIE_SAMESITE,
     },
   },
@@ -64,14 +52,6 @@ export const config = {
     accessKey: env.STORAGE_ACCESS_KEY,
     secretKey: env.STORAGE_SECRET_KEY,
     maxFileSize: env.STORAGE_MAX_FILE_SIZE,
-  },
-  mail: {
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
-    user: env.SMTP_USER,
-    password: env.SMTP_PASSWORD,
-    from: env.MAIL_FROM,
   },
   websocket: {
     enabled: env.WS_ENABLED,

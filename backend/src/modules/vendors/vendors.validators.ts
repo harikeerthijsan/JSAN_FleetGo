@@ -1,4 +1,3 @@
-import {partialSchema} from '../../utils/partialSchema';
 import { z } from "zod";
 
 /** Phase 11 — Vendor Management request validation. A vendor is an Organization
@@ -38,7 +37,8 @@ export const registerSchema = z.object({
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
-export const updateSchema = partialSchema(registerSchema)
+export const updateSchema = registerSchema
+  .partial()
   .omit({ type: true })
   .refine((d) => Object.keys(d).length > 0, { message: "At least one field must be provided" });
 export type UpdateInput = z.infer<typeof updateSchema>;

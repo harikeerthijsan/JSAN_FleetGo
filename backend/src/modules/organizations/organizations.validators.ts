@@ -1,4 +1,3 @@
-import {partialSchema} from '../../utils/partialSchema';
 import { EntityStatus, OrganizationType } from '@prisma/client';
 import { z } from 'zod';
 
@@ -28,7 +27,8 @@ export const createOrganizationSchema = z.object({
 });
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
 
-export const updateOrganizationSchema = partialSchema(createOrganizationSchema)
+export const updateOrganizationSchema = createOrganizationSchema
+  .partial()
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',
   });

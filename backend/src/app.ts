@@ -3,12 +3,7 @@ import path from 'node:path';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, {
-  type Application,
-  type NextFunction,
-  type Request,
-  type Response,
-} from 'express';
+import express, { type Application, type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import { config } from './config';
 import { errorHandler, notFound, requestLogger } from './middlewares';
@@ -23,46 +18,19 @@ export function createApp(): Application {
   const app = express();
 
   // --- Security & parsing -------------------------------------------------
-  app.disable('x-powered-by');
-  app.set('trust proxy', config.app.trustProxyHops);
-  // Production permits the built SPA and map resources without allowing inline
-  // scripts. Development leaves CSP to Vite's HMR server.
-  app.use(
-    helmet({
-      contentSecurityPolicy: config.app.isProduction
-        ? {
-            directives: {
-              defaultSrc: ["'self'"],
-              scriptSrc: ["'self'"],
-              styleSrc: ["'self'", "'unsafe-inline'"],
-              imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-              fontSrc: ["'self'", 'data:'],
-              connectSrc: ["'self'", 'https:', 'wss:'],
-              mediaSrc: ["'self'", 'blob:'],
-              workerSrc: ["'self'", 'blob:'],
-              objectSrc: ["'none'"],
-              frameAncestors: ["'none'"],
-              formAction: ["'self'"],
-              baseUri: ["'self'"],
-            },
-          }
-        : false,
-    }),
-  );
+  app.set('trust proxy', 1);
+  // CSP is disabled because this service also serves the built SPA (hashed
+  // assets, web workers and external map tiles); the default policy would block
+  // them. Other helmet protections stay on.
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(
     cors({
-      origin: config.cors.origins.length > 0 ? config.cors.origins : false,
+      origin: config.cors.origins.length > 0 ? config.cors.origins : true,
       credentials: true,
     }),
   );
-  app.use(
-    `${config.app.apiPrefix}/inventory/import`,
-    express.json({ limit: '5mb' }),
-  );
-  app.use(
-    `${config.app.apiPrefix}/tracking/webhooks`,
-    express.raw({ type: 'application/json', limit: '256kb' }),
-  );
+  app.use(`${config.app.apiPrefix}/inventory/import`, express.json({ limit: '5mb' }));
+  app.use(`${config.app.apiPrefix}/tracking/webhooks`, express.raw({type:'application/json',limit:'256kb'}));
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
@@ -78,8 +46,6 @@ export function createApp(): Application {
   const distDir =
     process.env.FRONTEND_DIST || path.resolve(__dirname, '../../frontend/dist');
   const serveSpa = fs.existsSync(path.join(distDir, 'index.html'));
-  if (config.app.isProduction && process.env.FRONTEND_DIST && !serveSpa)
-    throw new Error('Built frontend is missing');
 
   // --- Root info endpoint (API-only mode) ---------------------------------
   // Only when we are NOT serving the SPA; otherwise the SPA owns `/`.
@@ -89,8 +55,7 @@ export function createApp(): Application {
         res,
         {
           name: config.app.name,
-          description:
-            'FleetGo — Enterprise Fleet Logistics Management Platform',
+          description: 'FleetGo — Enterprise Fleet Logistics Management Platform',
           apiPrefix: config.app.apiPrefix,
           docs: `${config.app.apiPrefix}/health`,
         },
@@ -104,30 +69,13 @@ export function createApp(): Application {
 
   // --- Static frontend (single-service hosting) ---------------------------
   if (serveSpa) {
-    app.use(
-      '/assets',
-      express.static(path.join(distDir, 'assets'), {
-        maxAge: '1y',
-        immutable: true,
-      }),
-    );
-    app.use(
-      express.static(distDir, {
-        maxAge: 0,
-        setHeaders: (res, file) => {
-          if (file.endsWith('.html'))
-            res.setHeader('Cache-Control', 'no-store');
-        },
-      }),
-    );
+    app.use(express.static(distDir));
     // SPA fallback: serve index.html for non-API GET routes so client-side
     // routing works on refresh/deep-links; API paths fall through to the JSON 404.
     app.get('*', (req: Request, res: Response, next: NextFunction) => {
       if (req.method !== 'GET' || req.path.startsWith(config.app.apiPrefix)) {
         return next();
       }
-      if (path.extname(req.path)) return next();
-      res.setHeader('Cache-Control', 'no-store');
       res.sendFile(path.join(distDir, 'index.html'));
     });
   }
