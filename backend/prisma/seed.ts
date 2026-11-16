@@ -157,8 +157,43 @@ async function seedMasterData() {
     });
   };
 
-  const makes = ['Toyota', 'Ford', 'Tata', 'Mahindra', 'Ashok Leyland'];
+  const makes = ['Toyota', 'Ford', 'Tata', 'Mahindra', 'Ashok Leyland', 'Honda', 'Hyundai'];
   for (const name of makes) await upsertNamed(prisma.vehicleMake)(name);
+
+  // Model catalogue (make → model names). Idempotent: each model is created once
+  // per make. Names are stored verbatim so the full trim/variant text is selectable.
+  const modelCatalogue: Record<string, string[]> = {
+    Ford: [
+      'Ranger Double Cab XLT 4X4 10 speed Automatic',
+      'Ranger XLS double cab 2.0 4x4 - Diesel - 6-speed Automatic',
+    ],
+    Honda: [
+      'Civic 5d Hatchback HEV Automatic 2.0L',
+      'Civic 5d Hatchback Hybrid Sport 2.0L automatic',
+      'Civic Hybrid 2.0L Elegance 5d Hatchback automatic',
+      'Civic Sport Hybrid 4D Sedan automatic 2.0L',
+      'Civic Sport Hybrid 5d Hatchback Automatic 2.0L',
+      'HR-V e:HEV Automatic 1.5l',
+      'HR-V e:HEV E Automatic 1.5l',
+    ],
+    Hyundai: [
+      'I30 5-doors 1.0 T-GDi DCT MHEV Essential',
+      'Ioniq5 5d EV',
+    ],
+    Toyota: [
+      'Corolla Cross Hybrid 1.8L Automatic',
+      'Corolla Hatchback 5d 1.8 HEV petrol automatic',
+      'Corolla Sedan 5d 1.8 petrol hybrid automatic',
+    ],
+  };
+  for (const [makeName, models] of Object.entries(modelCatalogue)) {
+    const make = await prisma.vehicleMake.findUnique({ where: { name: makeName } });
+    if (!make) continue;
+    for (const name of models) {
+      const existing = await prisma.vehicleModel.findFirst({ where: { makeId: make.id, name } });
+      if (!existing) await prisma.vehicleModel.create({ data: { makeId: make.id, name } });
+    }
+  }
 
   const categories = ['Passenger', 'Commercial', 'Heavy'];
   for (const name of categories) await upsertNamed(prisma.vehicleCategory)(name);
@@ -196,7 +231,7 @@ async function seedMasterData() {
     await prisma.vehicleType.updateMany({ where: { name: { in: ['Van', 'Truck', 'Pickup'] } }, data: { categoryId: commercial.id } });
   }
 
-  console.log('✔ Master data seeded (makes, models*, categories, types, fuels, ownerships, document types)');
+  console.log('✔ Master data seeded (makes, models, categories, types, fuels, ownerships, document types)');
 }
 
 async function seedVehicles() {
