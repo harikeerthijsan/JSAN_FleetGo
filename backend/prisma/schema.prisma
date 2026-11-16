@@ -502,6 +502,8 @@ model Vehicle {
 
   manufacturingYear Int?
   color             String?
+  // Country of registration / origin.
+  country           String?
 
   // Assignment & custody (reuse Phase 2 Organization / Depot).
   organizationId String?

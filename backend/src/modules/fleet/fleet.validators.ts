@@ -58,6 +58,7 @@ export const createVehicleSchema = z.object({
     .max(new Date().getFullYear() + 1)
     .optional(),
   color: optionalString,
+  country: optionalString,
   organizationId: z.string().uuid('Choose the assigned organization'),
   vendorId: optionalString,
   depotId: z.string().uuid('Choose the current depot'),

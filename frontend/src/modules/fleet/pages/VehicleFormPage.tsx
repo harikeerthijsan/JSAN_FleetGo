@@ -17,6 +17,7 @@ import type { NormalizedApiError } from '@/services/apiClient';
 import { fleetService } from '@/services/fleetService';
 import { masterDataService } from '@/services/masterDataService';
 import { inventoryApi } from '@/services/inventoryService';
+import { COUNTRIES } from '@/constants/countries';
 import type { InventoryLookups } from '@/types/inventory';
 import type { Organization } from '@/types/auth';
 import type { MasterRecord } from '@/types/vehicle';
@@ -26,7 +27,7 @@ type FormState = Record<string, string>;
 const EMPTY: FormState = {
   registrationNumber: '', vin: '', engineNumber: '', makeId: '', modelId: '',
   typeId: '', categoryId: '', fuelTypeId: '', ownershipTypeId: '',
-  manufacturingYear: '', color: '', organizationId: '', vendorId: '', depotId: '',
+  manufacturingYear: '', color: '', country: '', organizationId: '', vendorId: '', depotId: '',
   insuranceProvider: '', insurancePolicyNumber: '', insuranceExpiry: '',
   registrationCertNumber: '', registrationExpiry: '', remarks: '',
   receivedAt: '', receivedFromOrgId: '', custodianType: 'DEPOT',
@@ -40,7 +41,7 @@ function buildPayload(form: FormState): Record<string, unknown> {
   };
   const put = (k: string, v: string) => { if (v.trim()) p[k] = v.trim(); };
   (['vin', 'engineNumber', 'makeId', 'modelId', 'typeId', 'categoryId',
-    'fuelTypeId', 'ownershipTypeId', 'color', 'organizationId', 'vendorId',
+    'fuelTypeId', 'ownershipTypeId', 'color', 'country', 'organizationId', 'vendorId',
     'depotId', 'insuranceProvider', 'insurancePolicyNumber',
     'registrationCertNumber', 'remarks'] as const).forEach((k) => put(k, form[k]));
   if (form.manufacturingYear.trim()) p.manufacturingYear = Number(form.manufacturingYear);
@@ -112,7 +113,7 @@ export function VehicleFormPage() {
           categoryId: v.category?.id ?? '', fuelTypeId: v.fuelType?.id ?? '',
           ownershipTypeId: v.ownershipType?.id ?? '',
           manufacturingYear: v.manufacturingYear ? String(v.manufacturingYear) : '',
-          color: v.color ?? '', organizationId: v.organization?.id ?? '',
+          color: v.color ?? '', country: v.country ?? '', organizationId: v.organization?.id ?? '',
           vendorId: v.vendor?.id ?? '', depotId: v.depot?.id ?? '',
           insuranceProvider: v.insuranceProvider ?? '',
           insurancePolicyNumber: v.insurancePolicyNumber ?? '',
@@ -251,6 +252,8 @@ export function VehicleFormPage() {
               options={[{ label: '—', value: '' }, ...vendorOrgs.map((o) => ({ label: o.name, value: o.id }))]} /> : null}
             <Select label="Current depot / location" required={!isEdit} name="depotId" error={fieldErrors.depotId} value={form.depotId} onChange={(e) => set('depotId')(e.target.value)}
               options={[{ label: '—', value: '' }, ...opt(depots)]} />
+            <Select label="Country of registration" name="country" error={fieldErrors.country} value={form.country} onChange={(e) => set('country')(e.target.value)}
+              options={[{ label: '—', value: '' }, ...COUNTRIES.map((c) => ({ label: c, value: c }))]} />
           </div>
         </Card>
 

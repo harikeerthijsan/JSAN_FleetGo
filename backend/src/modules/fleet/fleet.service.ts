@@ -51,6 +51,7 @@ function toVehicleData(input: CreateVehicleInput | UpdateVehicleInput) {
   assign("ownershipTypeId", input.ownershipTypeId);
   assign("manufacturingYear", input.manufacturingYear);
   assign("color", input.color);
+  assign("country", input.country);
   assign("organizationId", input.organizationId);
   assign("vendorId", input.vendorId);
   assign("depotId", input.depotId);

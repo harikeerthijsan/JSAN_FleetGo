@@ -205,6 +205,7 @@ export function VehicleDetailsPage() {
             <Field label="Fuel type" value={vehicle.fuelType?.name} />
             <Field label="Manufacturing year" value={vehicle.manufacturingYear} />
             <Field label="Color" value={vehicle.color} />
+            <Field label="Country of registration" value={vehicle.country} />
             <Field label="Ownership" value={vehicle.ownershipType?.name} />
             <Field label="Registered by" value={vehicle.createdBy?.fullName} />
             <Field label="Remarks" value={vehicle.remarks} />

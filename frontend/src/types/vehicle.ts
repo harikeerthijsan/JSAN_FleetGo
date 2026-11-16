@@ -43,6 +43,7 @@ export interface Vehicle {
   depot: { id: string; name: string; code: string } | null;
   manufacturingYear: number | null;
   color: string | null;
+  country: string | null;
   insuranceProvider: string | null;
   insurancePolicyNumber: string | null;
   insuranceExpiry: string | null;
