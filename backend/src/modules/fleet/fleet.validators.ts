@@ -1,3 +1,4 @@
+import {partialSchema} from '../../utils/partialSchema';
 import { VehicleStatus } from '@prisma/client';
 import { z } from 'zod';
 import { receiptSchema } from '../inventory/inventory.validators';
@@ -68,7 +69,7 @@ export const createVehicleSchema = z.object({
   registrationExpiry: optionalDate,
   status: z.nativeEnum(VehicleStatus).optional(),
   remarks: optionalString,
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   receiving: receiptSchema.pick({
     receivedAt: true, receivedFromOrgId: true, custodianType: true,
     custodianId: true, initialCondition: true, odometer: true, accessories: true,
@@ -77,9 +78,7 @@ export const createVehicleSchema = z.object({
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 
 // All fields optional on update; registrationNumber kept non-empty if present.
-export const updateVehicleSchema = createVehicleSchema
-  .omit({ receiving: true })
-  .partial()
+export const updateVehicleSchema = partialSchema(createVehicleSchema.omit({ receiving: true }))
   .extend({
     registrationNumber: z.string().trim().min(1).optional(),
   })

@@ -14,6 +14,7 @@ function createStorageProvider(): StorageProvider {
       return new LocalStorageProvider();
     case 's3':
     case 'gcs':
+      if(config.app.isProduction)throw new Error('Configured storage driver is not implemented');
       logger.warn(
         `Storage driver "${config.storage.driver}" is not implemented yet; ` +
           'falling back to local storage. Implement it before production use.',

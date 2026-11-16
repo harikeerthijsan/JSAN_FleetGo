@@ -1,3 +1,4 @@
+import {partialSchema} from '../../utils/partialSchema';
 import {
   ApprovalDecision,
   TicketPriority,
@@ -49,12 +50,11 @@ export const createTicketSchema = z.object({
   requestedQuantity: z.coerce.number().int().min(1).max(1000).optional(),
   vehicleId: optionalString,
   // Type-specific fields (incident details, severity, contact, instructions…).
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 
-export const updateTicketSchema = createTicketSchema
-  .partial()
+export const updateTicketSchema = partialSchema(createTicketSchema)
   .omit({ type: true })
   .refine((d) => Object.keys(d).length > 0, {
     message: 'At least one field must be provided',

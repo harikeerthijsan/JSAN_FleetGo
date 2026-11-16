@@ -1,6 +1,7 @@
 import { config } from '../../config';
 import { checkDatabaseConnection } from '../../database/prisma';
 import type { HealthCheckResult } from '../../types';
+import {checkStorage} from '../../utils/storage/readiness';
 
 /**
  * Health service — assembles application and dependency status. The overall
@@ -9,17 +10,18 @@ import type { HealthCheckResult } from '../../types';
  */
 export const healthService = {
   async getHealth(): Promise<HealthCheckResult> {
-    const dbConnected = await checkDatabaseConnection();
+    const [dbConnected,storageReady] = await Promise.all([checkDatabaseConnection(),checkStorage()]);
 
     return {
       application: config.app.name,
-      status: dbConnected ? 'ok' : 'degraded',
+      status: dbConnected && storageReady ? 'ok' : 'degraded',
       environment: config.app.env,
       version: process.env.npm_package_version ?? '1.0.0',
       uptimeSeconds: Math.round(process.uptime()),
       database: {
         status: dbConnected ? 'connected' : 'disconnected',
       },
+      storage:{status:storageReady?'writable':'unavailable'},
       timestamp: new Date().toISOString(),
     };
   },

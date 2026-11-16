@@ -6,6 +6,8 @@ import { ApiError } from '../../utils/ApiError';
 import { writeAudit } from '../../utils/audit';
 import { accessToken } from '../../utils/jwt';
 import { password } from '../../utils/password';
+import {mailConfigured,sendPasswordReset} from '../../utils/mail';
+import {logger} from '../../utils/logger';
 import {
   durationToMs,
   expiresInMs,
@@ -195,6 +197,7 @@ export const authService = {
     email: string,
     ctx: ClientContext,
   ): Promise<{ devToken?: string }> {
+    if(config.app.isProduction&&!mailConfigured())throw new ApiError(503,'Password recovery is unavailable. Contact your administrator.');
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (user && user.status === 'ACTIVE') {
@@ -211,8 +214,13 @@ export const authService = {
         action: 'PASSWORD_RESET_REQUESTED',
         ...ctx,
       });
-      // A real email would be sent here by a Notifications module in a later
-      // phase. For development we surface the token to the caller.
+        if(config.app.isProduction){
+          try{await sendPasswordReset(email,raw);}catch{
+            await prisma.passwordResetToken.deleteMany({where:{userId:user.id,tokenHash:hashToken(raw)}});
+            logger.error('Password reset email delivery failed');
+            // Keep the public response identical for existing/unknown accounts.
+          }
+        }
       if (!config.app.isProduction) return { devToken: raw };
     }
 

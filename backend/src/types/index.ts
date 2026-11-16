@@ -15,5 +15,6 @@ export interface HealthCheckResult {
   database: {
     status: DatabaseStatus;
   };
+  storage?: {status:'writable'|'unavailable'};
   timestamp: string;
 }

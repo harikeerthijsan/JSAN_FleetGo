@@ -1,0 +1,50 @@
+> fleetgo-backend@1.0.0 test:production
+> node scripts/test-production.cjs
+PASS Production rejects weak secrets and insecure cookies
+PASS Empty database refuses bootstrap without explicit administrator credentials
+PASS Fresh migrations and production bootstrap succeed without a mounted volume
+PASS Repeated release/bootstrap is idempotent and retains the original password
+PASS Only the explicit production administrator is created
+PASS No synthetic vehicles, organizations or depots are seeded
+PASS Production creates no simulated GPS provider
+PASS Required ticket defaults are installed
+PASS Demo seed is absent from runtime image
+PASS Compiler/dev dependencies are absent from runtime image
+PASS Health checks database and upload storage
+PASS Application runs as non-root after volume initialization
+PASS SPA deep links are served by the same production origin
+PASS SPA HTML cannot cache stale deployment assets
+PASS Production CSP is enabled and framework fingerprint removed
+PASS Hashed frontend assets have immutable caching
+PASS Missing static assets do not return SPA HTML
+PASS Unknown API routes stay JSON 404s
+PASS Patched validation returns field errors
+PASS Explicit production administrator can sign in
+PASS Refresh cookie is HttpOnly, Secure and SameSite
+PASS Cookie refresh works behind production configuration
+PASS Authenticated user profile is available
+PASS Untrusted origins do not receive credentialed CORS permission
+PASS GPS simulation is disabled in production
+PASS Production WebSocket authenticates and streams scoped snapshots
+PASS Configuration responses do not expose server secrets
+PASS Unconfigured password recovery reports unavailable and never exposes a token
+PASS Production module smoke check /api/v1/inventory/dashboard
+PASS Production module smoke check /api/v1/tickets/dashboard
+PASS Production module smoke check /api/v1/allocations
+PASS Production module smoke check /api/v1/trips
+PASS Production module smoke check /api/v1/claims
+PASS Production module smoke check /api/v1/settings
+PASS Uploaded bytes survive a container restart
+PASS Uploaded bytes survive replacement with a new container
+PASS Storage rejects sibling-prefix directory traversal
+PASS Patched ExcelJS dependency still writes and reads XLSX
+PASS Zod upgrade preserves omitted fields in partial updates
+PASS Unexpected server errors are sanitized
+PASS Production access logs omit reset tokens and query secrets
+PASS Password reset mail uses TLS and the configured public origin
+PASS Railway startup refuses to store uploads without a persistent mount
+{
+  "checks": 43,
+  "result": "Production container checks passed",
+  "image": "fleetgo:production-check"
+}

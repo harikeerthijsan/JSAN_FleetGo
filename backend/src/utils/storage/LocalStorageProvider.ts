@@ -35,7 +35,8 @@ export class LocalStorageProvider implements StorageProvider {
   /** Resolve a storage key to an absolute path, guarding against traversal. */
   private resolvePath(key: string): string {
     const full = path.resolve(this.basePath, key);
-    if (!full.startsWith(this.basePath)) {
+    const relative=path.relative(this.basePath,full);
+    if (!relative || relative === '..' || relative.startsWith('..'+path.sep) || path.isAbsolute(relative)) {
       throw new Error('Invalid storage key');
     }
     return full;

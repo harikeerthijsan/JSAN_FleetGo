@@ -1,3 +1,4 @@
+import {partialSchema} from '../../utils/partialSchema';
 import { z } from "zod";
 
 /** Insurance Claims request validation. */
@@ -64,8 +65,7 @@ export const createSchema = createFields.superRefine((input, ctx) => {
 });
 export type CreateInput = z.infer<typeof createSchema>;
 
-export const updateSchema = createFields
-  .partial()
+export const updateSchema = partialSchema(createFields)
   .omit({ vehicleId: true, thirdPartyFileCounts: true })
   .refine((d) => Object.keys(d).length > 0, { message: "At least one field must be provided" });
 export type UpdateInput = z.infer<typeof updateSchema>;

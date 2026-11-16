@@ -1,0 +1,34 @@
+name: Production readiness
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  railway-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install locked dependencies
+        run: |
+          npm --prefix backend ci
+          npm --prefix frontend ci
+      - name: Audit shipped dependencies
+        run: |
+          npm --prefix backend audit --omit=dev --audit-level=moderate
+          npm --prefix frontend audit --omit=dev --audit-level=moderate
+      - name: Map component checks
+        run: npm --prefix frontend run test:tracking-map
+      - name: Build production image
+        run: docker build -t fleetgo:production-check .
+      - name: Fresh database and production container checks
+        run: npm --prefix backend run test:production
