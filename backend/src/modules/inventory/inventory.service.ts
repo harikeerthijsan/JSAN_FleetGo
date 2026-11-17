@@ -409,6 +409,9 @@ export async function receiveTx(
     ["makeId", tx.vehicleMake],
     ["modelId", tx.vehicleModel],
     ["typeId", tx.vehicleType],
+    ["categoryId", tx.vehicleCategory],
+    ["fuelTypeId", tx.fuelType],
+    ["ownershipTypeId", tx.ownershipType],
   ] as const) {
     if (
       input[key] &&
@@ -495,6 +498,18 @@ export async function receiveTx(
         makeId: input.makeId,
         modelId: input.modelId,
         typeId: input.typeId,
+        engineNumber: input.engineNumber,
+        categoryId: input.categoryId,
+        fuelTypeId: input.fuelTypeId,
+        ownershipTypeId: input.ownershipTypeId,
+        manufacturingYear: input.manufacturingYear,
+        color: input.color,
+        country: input.country,
+        insuranceProvider: input.insuranceProvider,
+        insurancePolicyNumber: input.insurancePolicyNumber,
+        insuranceExpiry: input.insuranceExpiry ? new Date(input.insuranceExpiry) : undefined,
+        registrationCertNumber: input.registrationCertNumber,
+        registrationExpiry: input.registrationExpiry ? new Date(input.registrationExpiry) : undefined,
         organizationId: input.organizationId,
         createdById: actor.id,
       },

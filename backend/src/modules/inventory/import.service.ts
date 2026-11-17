@@ -7,13 +7,23 @@ import type { AuthenticatedUser } from "../../types/auth";
 import { receiptSchema, type ReceiptInput } from "./inventory.validators";
 import { receiveTx, inventoryService } from "./inventory.service";
 export const IMPORT_COLUMNS = [
-  "vehicleId",
-  "vehicleCode",
   "registrationNumber",
   "vin",
   "makeId",
   "modelId",
   "typeId",
+  "engineNumber",
+  "categoryId",
+  "fuelTypeId",
+  "ownershipTypeId",
+  "manufacturingYear",
+  "color",
+  "country",
+  "insuranceProvider",
+  "insurancePolicyNumber",
+  "insuranceExpiry",
+  "registrationCertNumber",
+  "registrationExpiry",
   "organizationId",
   "receivedAt",
   "receivedFromOrgId",
@@ -22,8 +32,6 @@ export const IMPORT_COLUMNS = [
   "custodianId",
   "initialCondition",
   "odometer",
-  "accessories",
-  "remarks",
 ];
 export async function readWorkbook(buffer: Buffer, fileName: string) {
   // Check ZIP central-directory sizes before ExcelJS allocates decompressed workbook data.
@@ -113,8 +121,6 @@ export async function template() {
     receivedAt: new Date().toISOString(),
     custodianType: "DEPOT",
     initialCondition: "GOOD",
-    remarks:
-      "Replace example values; use existing reference IDs from the import screen.",
   });
   const help = b.addWorksheet("Instructions");
   help.addRow([
@@ -126,6 +132,8 @@ export async function template() {
   help.addRow([
     "Delete the example row. Preview errors before confirming import. Max 1,000 rows.",
   ]);
+  help.addRow(["Optional expiry dates: use ISO datetime, for example 2027-11-17T00:00:00Z. Leave unknown optional fields blank."]);
+  help.addRow(["For DEPOT custody use the receiving depot ID as custodianId; for VENDOR use the vendor organization ID; for ORGANIZATION use the assigned organization ID. Upload photos, videos and PDFs later using Edit."]);
   return b.xlsx.writeBuffer();
 }
 type PreviewRow = {

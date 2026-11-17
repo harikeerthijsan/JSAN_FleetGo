@@ -2055,13 +2055,23 @@ function BulkImport() {
   const [dirty, setDirty] = useState(false);
   const key = useRef(crypto.randomUUID());
   const columns = [
-    "vehicleId",
-    "vehicleCode",
     "registrationNumber",
     "vin",
     "makeId",
     "modelId",
     "typeId",
+    "engineNumber",
+    "categoryId",
+    "fuelTypeId",
+    "ownershipTypeId",
+    "manufacturingYear",
+    "color",
+    "country",
+    "insuranceProvider",
+    "insurancePolicyNumber",
+    "insuranceExpiry",
+    "registrationCertNumber",
+    "registrationExpiry",
     "organizationId",
     "receivedAt",
     "receivedFromOrgId",
@@ -2070,8 +2080,6 @@ function BulkImport() {
     "custodianId",
     "initialCondition",
     "odometer",
-    "accessories",
-    "remarks",
   ];
   const mapped = () =>
     source.map((row) =>
@@ -2180,6 +2188,7 @@ function BulkImport() {
               downloadCsv(
                 [
                   {
+                    ...Object.fromEntries(columns.map((column) => [column, ""])),
                     registrationNumber: "SYNTHETIC-001",
                     organizationId: "",
                     receivedAt: new Date().toISOString(),
