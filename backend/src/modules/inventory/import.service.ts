@@ -6,6 +6,31 @@ import { ApiError } from "../../utils/ApiError";
 import type { AuthenticatedUser } from "../../types/auth";
 import { receiptSchema, type ReceiptInput } from "./inventory.validators";
 import { receiveTx, inventoryService } from "./inventory.service";
+import { normalizeImportRow, type ImportReferences } from './import.normalization';
+
+async function importReferences(): Promise<ImportReferences> {
+  const [makeId, modelId, typeId, categoryId, fuelTypeId, ownershipTypeId, organizations, depots, users] = await Promise.all([
+    prisma.vehicleMake.findMany({where:{isActive:true}}), prisma.vehicleModel.findMany({where:{isActive:true}}),
+    prisma.vehicleType.findMany({where:{isActive:true}}), prisma.vehicleCategory.findMany({where:{isActive:true}}),
+    prisma.fuelType.findMany({where:{isActive:true}}), prisma.ownershipType.findMany({where:{isActive:true}}),
+    prisma.organization.findMany({where:{status:'ACTIVE'}}), prisma.depot.findMany({where:{status:'ACTIVE'}}),
+    prisma.user.findMany({where:{status:'ACTIVE'},select:{id:true,fullName:true}}),
+  ]);
+  return {makeId, modelId, typeId, categoryId, fuelTypeId, ownershipTypeId,
+    organizationId:organizations, receivedFromOrgId:organizations, receivingDepotId:depots,
+    DEPOT:depots, ORGANIZATION:organizations,
+    VENDOR:organizations.filter(o=>o.type==='VEHICLE_VENDOR'||o.type==='TRANSPORT_PARTNER'),
+    USER:users.map(u=>({id:u.id,name:u.fullName}))};
+}
+
+function prepareRow(row: Record<string, unknown>, refs: ImportReferences) {
+  const normalized = normalizeImportRow(row, refs);
+  const parsed = receiptSchema.safeParse(normalized.values);
+  const errors = [...normalized.errors, ...(parsed.success ? [] : parsed.error.issues
+    .filter(issue=>!normalized.errors.some(error=>error.startsWith(`${issue.path.join('.')}:`)))
+    .map(issue=>`${issue.path.join('.')}: ${issue.message}`))];
+  return {input: parsed.success ? parsed.data : undefined, errors};
+}
 export const IMPORT_COLUMNS = [
   "registrationNumber",
   "vin",
@@ -75,7 +100,7 @@ export async function readWorkbook(buffer: Buffer, fileName: string) {
   const book = new ExcelJS.Workbook();
   try {
     if (fileName.toLowerCase().endsWith(".csv"))
-      await book.csv.read(Readable.from(buffer));
+      await book.csv.read(Readable.from(buffer), { dateFormats: [] });
     else if (fileName.toLowerCase().endsWith(".xlsx"))
       await book.xlsx.load(buffer as never);
     else throw ApiError.badRequest("Use an .xlsx or .csv file");
@@ -104,8 +129,10 @@ export async function readWorkbook(buffer: Buffer, fileName: string) {
       if (cell.value !== null) {
         if (cell.type === ExcelJS.ValueType.Formula)
           throw ApiError.badRequest(`Formula not supported in row ${row}`);
-        out[h] =
-          cell.value instanceof Date ? cell.value.toISOString() : cell.text;
+        out[h] = cell.value instanceof Date ? cell.value.toISOString()
+          : typeof cell.value === 'number' && cell.value >= 20000 && cell.value <= 100000 && book.properties.date1904 && ['receivedAt','insuranceExpiry','registrationExpiry'].includes(h)
+            ? new Date(Date.UTC(1904,0,1) + Math.round(cell.value * 86400000)).toISOString()
+            : cell.text;
       }
     });
     rows.push(out);
@@ -124,16 +151,16 @@ export async function template() {
   });
   const help = b.addWorksheet("Instructions");
   help.addRow([
-    "Use existing organization, depot, make, model and type IDs. No master records are created by this import.",
+    "Reference columns ending in Id accept existing names OR IDs. Matching ignores case and extra spaces. Unknown or ambiguous names are rejected; no master records are created.",
   ]);
   help.addRow([
-    "Required: registrationNumber, organizationId, receivedAt (ISO datetime), receivedFromOrgId, receivingDepotId, custodianType, custodianId, initialCondition.",
+    "Required: registrationNumber, organizationId, receivedAt, receivedFromOrgId, receivingDepotId, custodianType, initialCondition. For VENDOR custody also enter custodianId (vendor name or ID).",
   ]);
   help.addRow([
     "Delete the example row. Preview errors before confirming import. Max 1,000 rows.",
   ]);
-  help.addRow(["Optional expiry dates: use ISO datetime, for example 2027-11-17T00:00:00Z. Leave unknown optional fields blank."]);
-  help.addRow(["For DEPOT custody use the receiving depot ID as custodianId; for VENDOR use the vendor organization ID; for ORGANIZATION use the assigned organization ID. Upload photos, videos and PDFs later using Edit."]);
+  help.addRow(["Dates: use Excel dates, YYYY-MM-DD, DD/MM/YYYY (day first), or ISO date/time with timezone. Date-only values mean midnight UTC. A year alone is invalid. Leave unknown optional fields blank, not 0."]);
+  help.addRow(["Custody accepts DEPOT / Current depot, VENDOR / Vendor / transport partner, ORGANIZATION / Assigned organization. Blank custodianId defaults to the receiving depot or assigned organization for those custody types. Vehicle type is separate from fuel type. Upload photos/videos later using Edit."]);
   return b.xlsx.writeBuffer();
 }
 type PreviewRow = {
@@ -149,24 +176,18 @@ export async function validateRows(
 ) {
   const seen = new Set<string>();
   const result: PreviewRow[] = [];
+  const refs = await importReferences();
   for (let i = 0; i < rows.length; i++) {
-    const cleaned = Object.fromEntries(
-      Object.entries(rows[i]).filter(
-        ([, v]) => v !== "" && v !== null && v !== undefined,
-      ),
-    );
-    const parsed = receiptSchema.safeParse(cleaned);
-    if (!parsed.success) {
+    const prepared = prepareRow(rows[i], refs);
+    if (prepared.errors.length || !prepared.input) {
       result.push({
         row: i + 2,
         status: "FAILED",
-        errors: parsed.error.issues.map(
-          (e) => `${e.path.join(".")}: ${e.message}`,
-        ),
+        errors: prepared.errors,
       });
       continue;
     }
-    const input = parsed.data;
+    const input = prepared.input;
     const keys = [
       `registration:${input.registrationNumber.toUpperCase()}`,
       ...(input.vin ? [`vin:${input.vin.toUpperCase()}`] : []),
@@ -239,36 +260,36 @@ export async function commitRows(
   });
   const seen = new Set<string>();
   const result = [];
+  const refs = await importReferences();
   for (let i = 0; i < rows.length; i++) {
-    const cleaned = Object.fromEntries(
-      Object.entries(rows[i]).filter(
-        ([, v]) => v !== "" && v !== null && v !== undefined,
-      ),
-    );
-    const parsed = receiptSchema.safeParse(cleaned);
-    if (!parsed.success) {
+    const prepared = prepareRow(rows[i], refs);
+    if (prepared.errors.length || !prepared.input) {
       result.push({
         row: i + 2,
         status: "FAILED",
-        errors: parsed.error.issues.map(
-          (e) => `${e.path.join(".")}: ${e.message}`,
-        ),
+        errors: prepared.errors,
       });
       continue;
     }
-    const reg = parsed.data.registrationNumber.toUpperCase();
-    if (seen.has(reg)) {
+    const input = prepared.input;
+    const identities = [
+      `registration:${input.registrationNumber.toUpperCase()}`,
+      ...(input.vin ? [`vin:${input.vin.toUpperCase()}`] : []),
+      ...(input.vehicleId ? [`id:${input.vehicleId}`] : []),
+      ...(input.vehicleCode ? [`code:${input.vehicleCode}`] : []),
+    ];
+    if (identities.some(identity=>seen.has(identity))) {
       result.push({
         row: i + 2,
         status: "SKIPPED",
-        errors: ["Duplicate registration within file"],
+        errors: ["Duplicate identity within this file (registration, VIN, vehicle ID or code)"],
       });
       continue;
     }
-    seen.add(reg);
+    identities.forEach(identity=>seen.add(identity));
     try {
       const receipt = await inventoryService.receive(
-        parsed.data,
+        prepared.input,
         actor,
         `${key}:row:${i}`,
       );

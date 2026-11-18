@@ -2168,9 +2168,10 @@ function BulkImport() {
     <>
       <Card
         title="Bulk Excel / CSV receipt import"
-        subtitle="Map columns, validate every row, review results, then confirm. Maximum 1,000 rows; 5 MB file limit."
+        subtitle="Use existing names or IDs for reference fields. Dates: Excel dates, YYYY-MM-DD or DD/MM/YYYY (day first). Maximum 1,000 rows; 5 MB file limit."
       >
         <Feedback error={error || lookup.error} success={summary} />
+        <p>Columns ending in Id accept names, such as Honda or North Depot. Names must match existing FleetGo records; ambiguous names need an ID. Vehicle type is separate from fuel type. Use Current depot, Vendor / transport partner, or Assigned organization for custody. For vendor custody, enter the actual vendor name in custodianId. Leave unknown optional fields blank, not 0. Date-only values use midnight UTC.</p>
         <div className="fg-inventory__actions">
           <Button
             variant="secondary"
