@@ -337,7 +337,7 @@ function TicketQueue() {
   return (
     <Boundary {...s}>
       <Card title="Approved ticket queue">
-        <DataTable
+        <DataTable paginate
           columns={columns}
           rows={s.data ?? []}
           rowKey={(t) => t.id}
@@ -790,7 +790,7 @@ function AllocationDetails() {
                 </div>
               ))}
             </dl>
-            <DataTable
+            <DataTable paginate
               columns={[
                 {
                   key: "code",
@@ -1947,7 +1947,7 @@ function Drivers() {
       <Feedback error={error || refs.error} />
       <Boundary {...s}>
         <Card title="Driver management">
-          <DataTable
+          <DataTable paginate
             columns={[
               { key: "name", header: "Driver", render: (d) => d.name },
               { key: "phone", header: "Contact", render: (d) => d.phone },
@@ -2099,7 +2099,7 @@ function Transporters() {
         title="Transport partner organizations"
         subtitle="Existing Organization records are reused. No duplicate transporter master is created."
       >
-        <DataTable
+        <DataTable paginate
           columns={[
             { key: "name", header: "Partner", render: (o) => o.name },
             {
@@ -2304,7 +2304,7 @@ function Exceptions() {
     <Boundary {...s}>
       <Feedback error={error} />
       <Card title="Operational exceptions">
-        <DataTable
+        <DataTable paginate
           columns={[
             {
               key: "trip",

@@ -104,7 +104,7 @@ export function VendorsMasterPage() {
           {notice ? (
             <div className="fg-auth__notice" style={{ margin: '0 var(--space-4) var(--space-3)', cursor: 'pointer' }} onClick={() => setNotice(null)}>{notice}</div>
           ) : null}
-          <DataTable columns={columns} rows={rows} rowKey={(o) => o.id} loading={loading}
+          <DataTable paginate columns={columns} rows={rows} rowKey={(o) => o.id} loading={loading}
             emptyTitle="No vendors or transport partners" />
         </Card>
       )}

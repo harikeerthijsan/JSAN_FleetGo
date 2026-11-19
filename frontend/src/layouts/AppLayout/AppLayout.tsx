@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { Suspense } from 'react';
 import { SidebarProvider, useSidebar } from '@/context/SidebarContext';
 import { AppConfigProvider } from '@/context/AppConfigContext';
 import { Header } from '../Header/Header';
@@ -20,7 +21,7 @@ function Shell() {
         <Header />
         <main key={pathname} className="fg-shell__content">
           {pathname !== '/dashboard' ? <AutomotiveBanner /> : null}
-          <Outlet />
+          <Suspense fallback={<div role="status">Loading page…</div>}><Outlet /></Suspense>
         </main>
       </div>
     </div>

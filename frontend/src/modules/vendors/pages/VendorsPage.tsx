@@ -331,7 +331,7 @@ function ContactsCard({ vendor, canManage, reload }: { vendor: VendorDetail; can
           <Button variant="primary" disabled={!form.name} onClick={add}>Add</Button>
         </div>
       ) : null}
-      <DataTable
+      <DataTable paginate
         columns={[
           { key: "name", header: "Name", render: (c: VendorContact) => <>{c.name}{c.isPrimary ? " ★" : ""}</> },
           { key: "title", header: "Title", render: (c: VendorContact) => c.title ?? "—" },
@@ -379,7 +379,7 @@ function LocationsCard({ vendor, canManage, reload }: { vendor: VendorDetail; ca
           <Button variant="primary" disabled={!form.label} onClick={add}>Add</Button>
         </div>
       ) : null}
-      <DataTable
+      <DataTable paginate
         columns={[
           { key: "label", header: "Label", render: (l: VendorLocation) => <>{l.label}{l.isPrimary ? " ★" : ""}</> },
           { key: "city", header: "City", render: (l: VendorLocation) => l.city ?? "—" },
@@ -435,7 +435,7 @@ function DocumentsCard({ vendor, canManage, reload }: { vendor: VendorDetail; ca
           <Button variant="primary" loading={busy} disabled={!file} onClick={upload}>Upload</Button>
         </div>
       ) : null}
-      <DataTable
+      <DataTable paginate
         columns={[
           { key: "title", header: "Title", render: (d: VendorDocument) => d.title },
           { key: "category", header: "Type", render: (d: VendorDocument) => DOC_CAT_LABEL[d.category] ?? d.category },
@@ -477,7 +477,7 @@ function UsersCard({ vendor, canManage, reload }: { vendor: VendorDetail; canMan
   return (
     <Card title="Assigned users" actions={canManage ? <Button variant="secondary" size="sm" onClick={assign}>Assign user</Button> : undefined}>
       {error ? <p className="fg-vendor__error" role="alert">{error}</p> : null}
-      <DataTable
+      <DataTable paginate
         columns={[
           { key: "name", header: "Name", render: (u: VendorUser) => u.fullName },
           { key: "email", header: "Email", render: (u: VendorUser) => u.email },

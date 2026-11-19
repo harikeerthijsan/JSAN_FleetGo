@@ -46,7 +46,7 @@ export function ApprovalInboxPage() {
         breadcrumbs={[{ label: 'FleetGo', to: '/dashboard' }, { label: 'Tickets', to: '/tickets' }, { label: 'Approval Inbox' }]}
       />
       <Card flush>
-        <DataTable
+        <DataTable paginate
           columns={columns}
           rows={rows}
           rowKey={(t) => t.id}

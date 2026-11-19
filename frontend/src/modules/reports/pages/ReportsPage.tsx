@@ -235,7 +235,7 @@ function SavedReports({ lookups }: { lookups: ReportLookups | null }) {
     <>
       <Card title="Saved reports">
         {error ? <p role="alert" className="fg-rep__error">{error}</p> : null}
-        <DataTable
+        <DataTable paginate
           columns={[
             { key: "name", header: "Name", render: (r: SavedReport) => <button className="fg-rep__linkbtn" onClick={() => setActive(r)}>{r.name}</button> },
             { key: "category", header: "Category", render: (r: SavedReport) => human(r.category) },

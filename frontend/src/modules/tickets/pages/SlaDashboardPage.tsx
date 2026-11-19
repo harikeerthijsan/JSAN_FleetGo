@@ -58,7 +58,7 @@ export function SlaDashboardPage() {
             <Card className="fg-stat fg-stat--danger"><span className="fg-stat__value">{data?.resolutionBreaches ?? 0}</span><span className="fg-stat__label">Resolution SLA Breaches</span></Card>
           </div>
           <Card flush className="fg-tk-section">
-            <DataTable
+            <DataTable paginate
               columns={columns}
               rows={data?.rows ?? []}
               rowKey={(t) => t.id}

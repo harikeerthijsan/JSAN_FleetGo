@@ -1128,7 +1128,7 @@ function ReservationTable({
     },
   ];
   return (
-    <DataTable
+    <DataTable paginate
       columns={cols}
       rows={rows}
       rowKey={(r) => r.id}
@@ -1701,7 +1701,7 @@ function Reconciliations() {
       ) : null}
       <LoadBoundary {...state} retry={state.load}>
         <Card title="Reconciliation sessions">
-          <DataTable
+          <DataTable paginate
             columns={cols}
             rows={state.data ?? []}
             rowKey={(r) => r.id}
@@ -2302,7 +2302,7 @@ function BulkImport() {
         {progress ? <p role="status" aria-live="polite">{progress}</p> : null}
         {busy ? <Spinner label="Processing import… Keep this page open." /> : null}
         {preview.length ? (
-          <DataTable columns={cols} rows={preview} rowKey={(r) => r.row} />
+          <DataTable paginate columns={cols} rows={preview} rowKey={(r) => r.row} />
         ) : null}
         <ConfirmDialog
           open={confirm}
@@ -2405,7 +2405,7 @@ function Reports() {
             {adjustments.loading ? (
               <Spinner label="Loading adjustments…" />
             ) : (
-              <DataTable
+              <DataTable paginate
                 columns={[
                   {
                     key: "vehicle",

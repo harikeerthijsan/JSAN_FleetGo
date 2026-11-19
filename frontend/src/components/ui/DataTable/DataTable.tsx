@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Spinner } from '../Spinner/Spinner';
 import { EmptyState } from '../States/States';
+import { Pagination } from '../Pagination/Pagination';
 import './DataTable.css';
 
 export interface Column<T> {
@@ -22,6 +23,8 @@ export interface DataTableProps<T> {
   emptyTitle?: string;
   emptyDescription?: string;
   onRowClick?: (row: T) => void;
+  /** Paginate a complete local list. Leave off for server-paginated rows. */
+  paginate?: boolean;
 }
 
 /**
@@ -37,8 +40,16 @@ export function DataTable<T>({
   emptyTitle = 'No records found',
   emptyDescription,
   onRowClick,
+  paginate = false,
 }: DataTableProps<T>) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const sizeId = useId();
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / pageSize)));
+  useEffect(() => { if (currentPage !== page) setPage(currentPage); }, [currentPage, page]);
+  const visibleRows = paginate ? rows.slice((currentPage - 1) * pageSize, currentPage * pageSize) : rows;
   return (
+    <>
     <div className="fg-table-wrap">
       <table className="fg-table">
         <thead>
@@ -70,7 +81,7 @@ export function DataTable<T>({
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
+            visibleRows.map((row) => (
               <tr
                 key={rowKey(row)}
                 className={onRowClick ? 'fg-table__row--clickable' : ''}
@@ -98,5 +109,17 @@ export function DataTable<T>({
         </tbody>
       </table>
     </div>
+    {paginate && !loading && rows.length > 10 ? (
+      <div className="fg-table-pagination">
+        <label className="fg-table-pagination__size" htmlFor={sizeId}>
+          Rows per page
+          <select id={sizeId} value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }}>
+            {[10, 25, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
+          </select>
+        </label>
+        <Pagination page={currentPage} pageSize={pageSize} total={rows.length} onPageChange={setPage} />
+      </div>
+    ) : null}
+    </>
   );
 }

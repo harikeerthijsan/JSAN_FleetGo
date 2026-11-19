@@ -198,7 +198,7 @@ export function LookupManager({
         <div className="fg-auth__error" style={{ margin: '0 var(--space-4) var(--space-3)' }}>{error}</div>
       ) : null}
 
-      <DataTable
+      <DataTable paginate
         columns={allColumns}
         rows={rows}
         rowKey={(r) => r.id}

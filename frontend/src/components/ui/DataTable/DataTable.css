@@ -41,3 +41,7 @@
 .fg-table__row--clickable:hover {
   background: var(--color-primary-50);
 }
+.fg-table-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.fg-table-pagination__size { display: flex; align-items: center; gap: 8px; padding: 12px 16px; font-size: 13px; color: var(--text-secondary); }
+.fg-table-pagination__size select { padding: 6px 10px; border: 1px solid var(--border-color, #c4d8ef); border-radius: 6px; background: var(--surface-card, #fff); color: var(--text-primary); }
+.fg-table-pagination .fg-pagination { flex: 1; }

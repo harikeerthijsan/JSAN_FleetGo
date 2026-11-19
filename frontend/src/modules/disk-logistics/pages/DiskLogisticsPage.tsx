@@ -304,7 +304,7 @@ function DiskDetail({ lookups }: { lookups: DiskLookups | null }) {
         </div>
       </Card>
       <Card title="Custody chain">
-        <DataTable
+        <DataTable paginate
           columns={[
             { key: "from", header: "From", render: (r: DiskCustody) => dt(r.fromDate) },
             { key: "to", header: "To", render: (r: DiskCustody) => (r.toDate ? dt(r.toDate) : "current") },
@@ -317,7 +317,7 @@ function DiskDetail({ lookups }: { lookups: DiskLookups | null }) {
         />
       </Card>
       <Card title="Movement ledger">
-        <DataTable
+        <DataTable paginate
           columns={[
             { key: "when", header: "When", render: (r: DiskMovement) => dt(r.occurredAt) },
             { key: "type", header: "Type", render: (r: DiskMovement) => human(r.type) },
@@ -524,7 +524,7 @@ function ShipmentDetail({ lookups }: { lookups: DiskLookups | null }) {
       </Card>
 
       <Card title="Shipment items">
-        <DataTable
+        <DataTable paginate
           columns={[
             { key: "code", header: "Disk", render: (r: DiskShipmentItem) => r.disk?.diskCode ?? r.diskId.slice(0, 8) },
             { key: "serial", header: "Serial", render: (r: DiskShipmentItem) => r.disk?.serialNumber ?? "—" },
@@ -683,7 +683,7 @@ function ReconciliationDetail({ lookups }: { lookups: DiskLookups | null }) {
         </div>
       </Card>
       <Card title="Reconciliation items">
-        <DataTable
+        <DataTable paginate
           columns={[
             { key: "ref", header: "Disk ref", render: (r) => r.diskRef ?? r.diskId?.slice(0, 8) ?? "—" },
             { key: "result", header: "Result", render: (r) => <Badge value={r.result} /> },

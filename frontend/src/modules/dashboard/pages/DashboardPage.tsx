@@ -23,6 +23,7 @@ import { statusLabel, STATUS_COLORS } from '@/modules/fleet/statusMeta';
 import { OperationalOverview } from '@/modules/dashboard/OperationalOverview';
 import { CarPhotoCollection } from '@/components/CarPhotoCollection/CarPhotoCollection';
 import sunsetDrive from '@/assets/cars/sunset-drive.jpg';
+import streetViewCar from '@/assets/cars/street-view-car.webp';
 import './DashboardPage.css';
 
 function appTone(status?: HealthCheck['status']): BadgeTone {
@@ -94,7 +95,7 @@ export function DashboardPage() {
           <li><Icon name="dispatch" size={23} /><div><strong>Connected Operations</strong><span>From request to handover</span></div></li>
           <li><Icon name="inspections" size={23} /><div><strong>Controlled &amp; Auditable</strong><span>Inspections, inventory and claims</span></div></li>
         </ul>
-        <div className="fg-auto-banner__road" aria-hidden="true"><span className="fg-auto-banner__car"><svg viewBox="0 0 72 30" fill="none"><path d="m7 18 5-9 12-2 12-5h15l10 11 7 3v8H5v-6h2Z" fill="currentColor" /><path d="m29 7-6 7h29l-6-7H29Z" fill="#103568" /><circle cx="19" cy="24" r="5" fill="#103568" stroke="currentColor" strokeWidth="2" /><circle cx="55" cy="24" r="5" fill="#103568" stroke="currentColor" strokeWidth="2" /></svg></span></div>
+        <div className="fg-auto-banner__road" aria-hidden="true"><span className="fg-auto-banner__car"><img src={streetViewCar} alt="" decoding="async" width="112" height="40" /></span></div>
       </section>
       <PageTitle
         title="Operations overview"

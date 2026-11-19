@@ -136,7 +136,7 @@ export function RolesPage() {
       ) : null}
 
       <Card flush>
-        <DataTable
+        <DataTable paginate
           columns={columns}
           rows={roles}
           rowKey={(r) => r.id}
