@@ -41,6 +41,7 @@ import { VehicleDetailsPage } from '@/modules/fleet/pages/VehicleDetailsPage';
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { inventoryApi as api, downloadCsv } from "@/services/inventoryService";
+import { validateImportBatches, commitImportBatches, type ImportPlanRow } from '@/services/importBatches';
 import { STATUS_COLORS, statusLabel } from "@/modules/fleet/statusMeta";
 import type { VehicleStatus } from "@/types/vehicle";
 import type {
@@ -2054,6 +2055,11 @@ function BulkImport() {
   const [summary, setSummary] = useState("");
   const [dirty, setDirty] = useState(false);
   const key = useRef(crypto.randomUUID());
+  const [progress, setProgress] = useState('');
+  const [validated, setValidated] = useState(false);
+  const [importStarted, setImportStarted] = useState(false);
+  const [importComplete, setImportComplete] = useState(false);
+  const importPlan = useRef<ImportPlanRow[] | null>(null);
   const columns = [
     "registrationNumber",
     "vin",
@@ -2094,6 +2100,9 @@ function BulkImport() {
     setError("");
     setPreview([]);
     setSummary("");
+    setValidated(false);
+    setProgress('');
+    setSource([]);
     try {
       const out = await api.upload<{
         headers: string[];
@@ -2115,12 +2124,19 @@ function BulkImport() {
     }
   };
   const validate = async () => {
+    if (busy || importStarted) return;
     setBusy(true);
     setError("");
+    setPreview([]);
+    setValidated(false);
+    const rows = mapped();
+    setProgress(`Validating 0 of ${rows.length} rows…`);
     try {
-      setPreview(
-        await api.mutate<ImportRow[]>("/import/validate", { rows: mapped() }),
-      );
+      const results = await validateImportBatches(rows,
+        batch => api.mutate<ImportRow[]>('/import/validate', {rows:batch}, 'post', crypto.randomUUID(), 60_000),
+        (done, results) => {setProgress(`Validated ${done} of ${rows.length} rows`);setPreview(results);});
+      setPreview(results);
+      setValidated(true);
     } catch (e) {
       setError(message(e));
     } finally {
@@ -2128,23 +2144,29 @@ function BulkImport() {
     }
   };
   const commit = async () => {
+    if (busy || (!validated && !importStarted)) return;
+    if (!importPlan.current) {
+      const rows = mapped();
+      importPlan.current = preview.filter(row=>row.status==='READY').map(row=>({input:rows[row.row-2],fileRow:row.row}));
+    }
+    const plan = importPlan.current;
+    if (!plan.length) return;
+    setImportStarted(true);
     setBusy(true);
     setError("");
+    setProgress(`Importing 0 of ${plan.length} ready rows…`);
     try {
-      const out = await api.mutate<{
-        rows: ImportRow[];
-        successful: number;
-        failed: number;
-        skipped: number;
-      }>("/import/commit", { rows: mapped() }, "post", key.current);
-      setPreview(out.rows);
+      const results = await commitImportBatches(plan,key.current,
+        async (rows,batchKey) => (await api.mutate<{rows:ImportRow[]}>('/import/commit',{rows},'post',batchKey,60_000)).rows,
+        (done, results) => {setProgress(`Processed ${done} of ${plan.length} import rows`);setPreview(previous=>[...previous.filter(row=>!results.some(result=>result.row===row.row)),...results].sort((a,b)=>a.row-b.row));});
       setSummary(
-        `${out.successful} successful · ${out.failed} failed · ${out.skipped} skipped`,
+        `${results.filter(row=>row.status==='SUCCESS').length} successful · ${results.filter(row=>row.status==='FAILED').length} failed · ${results.filter(row=>row.status==='SKIPPED').length} skipped. Only validated ready rows were submitted.`,
       );
+      setImportComplete(true);
       setDirty(false);
       setConfirm(false);
     } catch (e) {
-      setError(message(e));
+      setError(`${message(e)} Some rows may already be saved. Keep this page open and use Retry import to recover results with the same request keys.`);
       setConfirm(false);
     } finally {
       setBusy(false);
@@ -2211,7 +2233,7 @@ function BulkImport() {
           label="Excel or CSV file"
           type="file"
           accept=".xlsx,.csv"
-          disabled={busy}
+          disabled={busy || importStarted}
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) void upload(file);
@@ -2228,6 +2250,7 @@ function BulkImport() {
                 <Select
                   key={c}
                   label={c}
+                  disabled={busy || importStarted}
                   value={mapping[c] ?? ""}
                   options={[
                     { label: "Not mapped", value: "" },
@@ -2236,6 +2259,7 @@ function BulkImport() {
                   onChange={(e) => {
                     setMapping((m) => ({ ...m, [c]: e.target.value }));
                     setPreview([]);
+                    setValidated(false);
                     setSummary("");
                     key.current = crypto.randomUUID();
                     setDirty(true);
@@ -2244,14 +2268,15 @@ function BulkImport() {
               ))}
             </div>
             <div className="fg-inventory__actions">
-              <Button loading={busy} onClick={validate}>
+              <Button loading={busy} disabled={busy || importStarted} onClick={validate}>
                 Validate and preview
               </Button>
-              {preview.some((r) => r.status === "READY") && !summary ? (
+              {validated && !importStarted && preview.some((r) => r.status === "READY") && !summary ? (
                 <Button disabled={busy} onClick={() => setConfirm(true)}>
                   Review import
                 </Button>
               ) : null}
+              {importStarted && !importComplete && !busy ? <Button onClick={commit}>Retry import</Button> : null}
               {preview.some((r) => r.errors.length) ? (
                 <Button
                   variant="secondary"
@@ -2274,14 +2299,15 @@ function BulkImport() {
             </div>
           </>
         ) : null}
-        {busy ? <Spinner label="Processing import…" /> : null}
+        {progress ? <p role="status" aria-live="polite">{progress}</p> : null}
+        {busy ? <Spinner label="Processing import… Keep this page open." /> : null}
         {preview.length ? (
           <DataTable columns={cols} rows={preview} rowKey={(r) => r.row} />
         ) : null}
         <ConfirmDialog
           open={confirm}
           title="Import validated inventory?"
-          message={`${preview.filter((r) => r.status === "READY").length} ready rows. Invalid and duplicate rows will be reported individually. Every row is checked again when imported.`}
+          message={`${preview.filter((r) => r.status === "READY").length} ready rows will be imported in small batches. Invalid and duplicate rows will not be submitted. Every row is checked again when imported. Keep this page open until finished.`}
           loading={busy}
           onConfirm={commit}
           onCancel={() => !busy && setConfirm(false)}

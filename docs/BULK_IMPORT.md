@@ -53,7 +53,18 @@ follow the existing 11-17 character rule, excluding I, O and Q.
 The maximum is 1,000 rows and 5 MB per file. Formula cells are rejected.
 Existing ID-based spreadsheets remain supported.
 
+Validation and confirmation run in batches of 20 rows, showing progress. Only
+READY rows are submitted for import after complete validation. Duplicate identities
+are checked across the whole file, including between batches. Each import request
+has a stable batch key. If a connection fails during confirmation, keep the page
+open and choose Retry import to recover results without creating duplicate vehicles.
+Do not refresh or change the file during a partial import: retry keys are retained
+only while this page remains open. If the page was closed, inspect saved inventory
+before attempting another import. Import requests have a 60-second timeout per
+batch; other app requests retain their normal timeout.
+
 ## Local verification
 
 Run `node scripts/test-import-normalization.cjs` from backend for focused checks.
 These checks use synthetic references and do not create database records.
+Run `node scripts/test-import-batches.cjs` from frontend for batch and retry checks.

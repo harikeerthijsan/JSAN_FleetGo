@@ -17,13 +17,15 @@ export const inventoryApi = {
     path: string,
     body: unknown = {},
     method: "post" | "put" = "post",
-    key = crypto.randomUUID(),
+    key: string = crypto.randomUUID(),
+    timeout?: number,
   ) {
     const r = await apiClient.request<ApiSuccess<T>>({
       url: `/inventory${path}`,
       method,
       data: body,
       headers: { "Idempotency-Key": key },
+      ...(timeout ? { timeout } : {}),
     });
     return r.data.data;
   },
