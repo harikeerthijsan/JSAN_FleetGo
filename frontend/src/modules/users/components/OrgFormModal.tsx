@@ -8,7 +8,8 @@ interface OrgFormModalProps {
   open: boolean;
   org: Organization | null; // null => create
   onClose: () => void;
-  onSaved: (message: string) => void;
+  onSaved: (message: string, organization?: Organization) => void;
+  allowedTypes?: OrganizationType[];
 }
 
 const TYPE_OPTIONS = [
@@ -18,7 +19,7 @@ const TYPE_OPTIONS = [
   { label: 'Transport Partner', value: 'TRANSPORT_PARTNER' },
 ];
 
-export function OrgFormModal({ open, org, onClose, onSaved }: OrgFormModalProps) {
+export function OrgFormModal({ open, org, onClose, onSaved, allowedTypes }: OrgFormModalProps) {
   const isEdit = Boolean(org);
   const [name, setName] = useState('');
   const [type, setType] = useState<OrganizationType>('VEHICLE_VENDOR');
@@ -33,15 +34,16 @@ export function OrgFormModal({ open, org, onClose, onSaved }: OrgFormModalProps)
     if (!open) return;
     setError(null);
     setName(org?.name ?? '');
-    setType(org?.type ?? 'VEHICLE_VENDOR');
+    setType(org?.type ?? allowedTypes?.[0] ?? 'VEHICLE_VENDOR');
     setContactName(org?.contactName ?? '');
     setContactEmail(org?.contactEmail ?? '');
     setContactPhone(org?.contactPhone ?? '');
     setStatus(org?.status ?? 'ACTIVE');
-  }, [open, org]);
+  }, [open, org, allowedTypes]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
@@ -54,11 +56,11 @@ export function OrgFormModal({ open, org, onClose, onSaved }: OrgFormModalProps)
         status,
       };
       if (isEdit && org) {
-        await organizationService.update(org.id, payload);
-        onSaved('Organization updated successfully');
+        const saved = await organizationService.update(org.id, payload);
+        onSaved('Organization updated successfully', saved);
       } else {
-        await organizationService.create(payload);
-        onSaved('Organization created successfully');
+        const saved = await organizationService.create(payload);
+        onSaved('Organization created successfully', saved);
       }
       onClose();
     } catch (err) {
@@ -96,7 +98,7 @@ export function OrgFormModal({ open, org, onClose, onSaved }: OrgFormModalProps)
           label="Type"
           value={type}
           onChange={(e) => setType(e.target.value as OrganizationType)}
-          options={TYPE_OPTIONS}
+          options={allowedTypes ? TYPE_OPTIONS.filter(option=>allowedTypes.includes(option.value as OrganizationType)) : TYPE_OPTIONS}
           disabled={isEdit}
         />
         <FormInput

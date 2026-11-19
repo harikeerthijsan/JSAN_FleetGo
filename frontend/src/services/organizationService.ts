@@ -20,6 +20,19 @@ export interface OrganizationPayload {
 }
 
 export const organizationService = {
+  /** Full reference lists must follow the API's 100-row maximum. */
+  async listAll(params: Omit<ListOrganizationsParams, 'page' | 'pageSize'> = {}): Promise<Organization[]> {
+    const rows: Organization[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const result = await organizationService.list({ ...params, page, pageSize: 100 });
+      rows.push(...result.data);
+      totalPages = result.meta.totalPages;
+      page++;
+    } while (page <= totalPages);
+    return rows;
+  },
   async list(
     params: ListOrganizationsParams,
   ): Promise<{ data: Organization[]; meta: PaginatedMeta }> {

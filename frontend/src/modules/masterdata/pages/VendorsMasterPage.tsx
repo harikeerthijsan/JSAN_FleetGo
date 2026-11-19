@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Button,
   Card,
@@ -14,7 +14,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { organizationService } from '@/services/organizationService';
-import type { Organization } from '@/types/auth';
+import type { Organization, OrganizationType } from '@/types/auth';
 import { OrgFormModal } from '@/modules/users/components/OrgFormModal';
 import { MasterDataTabs } from '../components/MasterDataTabs';
 
@@ -22,6 +22,7 @@ const typeLabel: Record<string, string> = {
   VEHICLE_VENDOR: 'Vehicle Vendor',
   TRANSPORT_PARTNER: 'Transport Partner',
 };
+const VENDOR_TYPES: OrganizationType[] = ['VEHICLE_VENDOR', 'TRANSPORT_PARTNER'];
 
 /**
  * Vendors & transport partners are REUSED from the Phase 2 Organization model
@@ -41,25 +42,33 @@ export function VendorsMasterPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Organization | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const requestId = useRef(0);
 
   const load = useCallback(async () => {
+    const request = ++requestId.current;
     if (!canRead) { setLoading(false); return; }
     setLoading(true);
+    setError(null);
     try {
       // Fetch both vendor-type orgs; filter client-side for the simple search.
       const [vendors, transport] = await Promise.all([
-        organizationService.list({ type: 'VEHICLE_VENDOR', pageSize: 200, search: search || undefined }),
-        organizationService.list({ type: 'TRANSPORT_PARTNER', pageSize: 200, search: search || undefined }),
+        organizationService.listAll({ type: 'VEHICLE_VENDOR', search: search || undefined }),
+        organizationService.listAll({ type: 'TRANSPORT_PARTNER', search: search || undefined }),
       ]);
-      setRows([...vendors.data, ...transport.data]);
-    } catch {
+      if (request !== requestId.current) return;
+      setRows([...vendors, ...transport].sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id)));
+    } catch (err) {
+      if (request !== requestId.current) return;
       setRows([]);
+      setError((err as { message?: string }).message ?? 'Could not load vendors and transport partners.');
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
-  }, [canRead, search]);
+  }, [canRead, search, refresh]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => { requestId.current++; }; }, [load]);
 
   const columns: Column<Organization>[] = [
     { key: 'name', header: 'Organization', render: (o) => <strong>{o.name}</strong> },
@@ -104,16 +113,22 @@ export function VendorsMasterPage() {
           {notice ? (
             <div className="fg-auth__notice" style={{ margin: '0 var(--space-4) var(--space-3)', cursor: 'pointer' }} onClick={() => setNotice(null)}>{notice}</div>
           ) : null}
-          <DataTable paginate columns={columns} rows={rows} rowKey={(o) => o.id} loading={loading}
-            emptyTitle="No vendors or transport partners" />
+          {error ? <div role="alert" className="fg-auth__error">{error} <Button type="button" onClick={() => setRefresh(value=>value+1)}>Retry loading organizations</Button></div> : null}
+          <DataTable paginate key={search} columns={columns} rows={rows} rowKey={(o) => o.id} loading={loading}
+            emptyTitle={error ? 'Organizations could not be loaded' : search ? 'No organizations match your search' : 'No vendors or transport partners'} />
         </Card>
       )}
 
       <OrgFormModal
         open={modalOpen}
         org={editing}
+        allowedTypes={VENDOR_TYPES}
         onClose={() => setModalOpen(false)}
-        onSaved={(msg) => { setNotice(msg); void load(); }}
+        onSaved={(msg, saved) => {
+          setNotice(msg);
+          if (saved) setSearch(saved.name);
+          setRefresh(value=>value+1);
+        }}
       />
     </div>
   );
