@@ -1472,6 +1472,7 @@ export const inspectionsService = {
   ) {
     requireManage(a);
     return operation(a, key, "pod.generate", input, async (tx) => {
+      await assertVehicleInScope(tx, input.vehicleId, a);
       const dispatch = await tx.dispatch.findUnique({
         where: { id: input.dispatchId },
         include: {

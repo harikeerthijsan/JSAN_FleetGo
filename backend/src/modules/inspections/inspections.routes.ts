@@ -303,6 +303,11 @@ discrepanciesRoutes.post(
 // Digital handover + POD  (/api/v1/handover)
 // ---------------------------------------------------------------------------
 handoverRoutes.get(
+  "/creation-choices",
+  anyPermission("inspections:confirm", "inspections:manage"),
+  asyncHandler(async (req, res) => out(res, await inspectionCreationChoices(req.user!, true))),
+);
+handoverRoutes.get(
   "/",
   read,
   validate({ query: v.querySchema }),

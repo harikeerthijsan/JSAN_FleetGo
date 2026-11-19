@@ -12,12 +12,12 @@ export function inspectionCreationVehicleScope(actor: AuthenticatedUser): Prisma
   return {OR:[{organizationId:actor.organizationId??'__none__'},{inventory:{receivedFromOrgId:actor.organizationId??'__none__'}}]};
 }
 
-export async function inspectionCreationChoices(actor: AuthenticatedUser) {
+export async function inspectionCreationChoices(actor: AuthenticatedUser, includeAllDispatchStates = false) {
   const manage=actor.permissions.includes('inspections:manage');
   if(!manage&&!actor.permissions.includes('inspections:confirm'))throw ApiError.forbidden();
   const vehicles=await prisma.vehicle.findMany({where:inspectionCreationVehicleScope(actor),select:{id:true,vehicleCode:true,registrationNumber:true},orderBy:[{vehicleCode:'asc'},{id:'asc'}]});
   const items=vehicles.length ? await prisma.dispatchVehicle.findMany({
-    where:{vehicleId:{in:vehicles.map(v=>v.id)},dispatch:{state:{in:['PLANNED','READY','CONFIRMED']}}},
+    where:{vehicleId:{in:vehicles.map(v=>v.id)},...(includeAllDispatchStates ? {} : {dispatch:{state:{in:['PLANNED','READY','CONFIRMED']}}})},
     select:{vehicleId:true,dispatch:{select:{id:true,reference:true,destinationDepotId:true}}},
   }):[];
   const dispatches=new Map<string,{id:string;reference:string;destinationDepotId:string;vehicleIds:string[]}>();

@@ -18,6 +18,7 @@ import type {
   Handover,
   InspectionTemplate,
   InspectionDashboard,
+  InspectionCreationChoices,
   ProofOfDelivery,
 } from "@/types/inspections";
 import {
@@ -415,11 +416,19 @@ export function DiscrepancyDetail() {
 
 // ---------------------------------------------------------------------------
 // Digital handover + Proof of Delivery
+function CreationChoicesFeedback({choices}: {choices: ReturnType<typeof useLoad<InspectionCreationChoices>>}) {
+  if (choices.loading) return <p role="status">Loading permitted vehicles and dispatches…</p>;
+  if (choices.error) return <div role="alert">{choices.error} <Button type="button" onClick={()=>void choices.load()}>Retry loading choices</Button></div>;
+  if (choices.data && !choices.data.vehicles.length) return <p role="status">No vehicles are available in your access scope. Ask operations to check vehicle custody and your account access.</p>;
+  return null;
+}
 // ---------------------------------------------------------------------------
 export function HandoverList() {
   const { hasPermission } = useAuth();
   const canCreate =
     hasPermission("inspections:confirm") || hasPermission("inspections:manage");
+  const defaultType = hasPermission('inspections:manage') ? 'DISPATCH' : 'RECEIVING';
+  const choices = useLoad<InspectionCreationChoices>(canCreate ? '/handover/creation-choices' : null);
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<Handover[]>([]);
   const [total, setTotal] = useState(0);
@@ -427,13 +436,14 @@ export function HandoverList() {
   const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
   const [draft, setDraft] = useState({
-    type: "DISPATCH",
+    type: defaultType,
     vehicleId: "",
     dispatchId: "",
     handoverByName: "",
     receivedByName: "",
   });
   const [busy, setBusy] = useState(false);
+  const dispatches = (choices.data?.dispatches ?? []).filter(d => d.vehicleIds.includes(draft.vehicleId));
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -453,6 +463,11 @@ export function HandoverList() {
   }, [page, tick]);
   const create = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy || choices.loading || choices.error) return;
+    if (!choices.data?.vehicles.some(v => v.id === draft.vehicleId) || (draft.dispatchId && !dispatches.some(d => d.id === draft.dispatchId))) {
+      setError('Select a permitted vehicle and its matching dispatch.');
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -461,7 +476,7 @@ export function HandoverList() {
       if (draft.handoverByName) body.handoverByName = draft.handoverByName;
       if (draft.receivedByName) body.receivedByName = draft.receivedByName;
       await api.mutate("/handover", body);
-      setDraft({ type: "DISPATCH", vehicleId: "", dispatchId: "", handoverByName: "", receivedByName: "" });
+      setDraft({ type: defaultType, vehicleId: "", dispatchId: "", handoverByName: "", receivedByName: "" });
       setTick((n) => n + 1);
     } catch (e) {
       setError(errText(e));
@@ -472,6 +487,7 @@ export function HandoverList() {
   return (
     <Card title="Digital handovers">
       <Feedback error={error} />
+      {canCreate ? <CreationChoicesFeedback choices={choices} /> : null}
       {canCreate ? (
         <form className="fg-insp__filters" onSubmit={create}>
           <Select
@@ -483,15 +499,17 @@ export function HandoverList() {
             ]}
             onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
           />
-          <FormInput
-            label="Vehicle ID"
+          <Select
+            label="Vehicle"
             required
             value={draft.vehicleId}
-            onChange={(e) => setDraft((d) => ({ ...d, vehicleId: e.target.value }))}
+            options={[{label:'Select a vehicle',value:''},...(choices.data?.vehicles ?? []).map(v => ({label:`${v.vehicleCode} — ${v.registrationNumber}`,value:v.id}))]}
+            onChange={(e) => setDraft((d) => ({ ...d, vehicleId: e.target.value, dispatchId: '' }))}
           />
-          <FormInput
-            label="Dispatch ID (optional)"
+          <Select
+            label="Dispatch (optional)"
             value={draft.dispatchId}
+            options={[{label:'No linked dispatch',value:''},...dispatches.map(d => ({label:d.reference,value:d.id}))]}
             onChange={(e) => setDraft((d) => ({ ...d, dispatchId: e.target.value }))}
           />
           <FormInput
@@ -504,7 +522,8 @@ export function HandoverList() {
             value={draft.receivedByName}
             onChange={(e) => setDraft((d) => ({ ...d, receivedByName: e.target.value }))}
           />
-          <Button type="submit" loading={busy} disabled={!draft.vehicleId}>
+          {draft.vehicleId && !dispatches.length ? <p>No dispatch is linked to this vehicle. Ask operations to check the delivery dispatch if this handover is for a delivery.</p> : null}
+          <Button type="submit" loading={busy} disabled={choices.loading || Boolean(choices.error) || !draft.vehicleId}>
             Record handover
           </Button>
         </form>
@@ -659,6 +678,7 @@ export function HandoverDetail() {
 export function PodScreen() {
   const { hasPermission } = useAuth();
   const canGenerate = hasPermission("inspections:manage");
+  const choices = useLoad<InspectionCreationChoices>(canGenerate ? '/handover/creation-choices' : null);
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<ProofOfDelivery[]>([]);
   const [total, setTotal] = useState(0);
@@ -667,6 +687,7 @@ export function PodScreen() {
   const [tick, setTick] = useState(0);
   const [selected, setSelected] = useState<ProofOfDelivery | null>(null);
   const [gen, setGen] = useState({ dispatchId: "", vehicleId: "" });
+  const dispatches = (choices.data?.dispatches ?? []).filter(d => d.vehicleIds.includes(gen.vehicleId));
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let active = true;
@@ -687,6 +708,11 @@ export function PodScreen() {
   }, [page, tick]);
   const generate = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy || choices.loading || choices.error) return;
+    if (!choices.data?.vehicles.some(v => v.id === gen.vehicleId) || !dispatches.some(d => d.id === gen.dispatchId)) {
+      setError('Select a permitted vehicle and its matching dispatch.');
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -705,21 +731,25 @@ export function PodScreen() {
     <>
       <Card title="Proof of delivery">
         <Feedback error={error} />
+        {canGenerate ? <CreationChoicesFeedback choices={choices} /> : null}
         {canGenerate ? (
           <form className="fg-insp__filters" onSubmit={generate}>
-            <FormInput
-              label="Dispatch ID"
-              required
-              value={gen.dispatchId}
-              onChange={(e) => setGen((g) => ({ ...g, dispatchId: e.target.value }))}
-            />
-            <FormInput
-              label="Vehicle ID"
+            <Select
+              label="Vehicle"
               required
               value={gen.vehicleId}
-              onChange={(e) => setGen((g) => ({ ...g, vehicleId: e.target.value }))}
+              options={[{label:'Select a vehicle',value:''},...(choices.data?.vehicles ?? []).map(v => ({label:`${v.vehicleCode} — ${v.registrationNumber}`,value:v.id}))]}
+              onChange={(e) => setGen({vehicleId:e.target.value,dispatchId:''})}
             />
-            <Button type="submit" loading={busy} disabled={!gen.dispatchId || !gen.vehicleId}>
+            <Select
+              label="Dispatch"
+              required
+              value={gen.dispatchId}
+              options={[{label:'Select a dispatch',value:''},...dispatches.map(d => ({label:d.reference,value:d.id}))]}
+              onChange={(e) => setGen((g) => ({ ...g, dispatchId: e.target.value }))}
+            />
+            {gen.vehicleId && !dispatches.length ? <p>No matching dispatch is available. Check the vehicle's delivery dispatch with operations.</p> : null}
+            <Button type="submit" loading={busy} disabled={choices.loading || Boolean(choices.error) || !gen.dispatchId || !gen.vehicleId}>
               Generate POD
             </Button>
           </form>
