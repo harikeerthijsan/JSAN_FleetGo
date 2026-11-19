@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -7,7 +7,6 @@ import {
   FormInput,
   PageTitle,
   Select,
-  StatusBadge,
 } from '@/components';
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -81,7 +80,6 @@ export function CreateTicketPage() {
   const [videos, setVideos] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [availability, setAvailability] = useState<{ totalAvailable: number; byDepot: { depotName: string; count: number }[] } | null>(null);
 
   const [depots, setDepots] = useState<MasterRecord[]>([]);
   const [models, setModels] = useState<MasterRecord[]>([]);
@@ -129,22 +127,8 @@ export function CreateTicketPage() {
     return () => { active = false; };
   }, [canChooseVendor, requestingOrgId, needsVehicle, reloadChoices]);
 
-  const showInventory = type === 'DELIVERY' || type === 'NEW_VEHICLE';
   // Damage, replacement and maintenance requests support photo/video evidence.
   const needsMedia = type === 'DAMAGE_INCIDENT' || type === 'REPLACEMENT' || type === 'MAINTENANCE';
-
-  // Live availability preview for inventory-relevant requests. (All vehicles are
-  // cars of a single type, so availability is the overall available count.)
-  useEffect(() => {
-    if (!showInventory) { setAvailability(null); return; }
-    ticketService.availability({}).then(setAvailability).catch(() => setAvailability(null));
-  }, [showInventory]);
-
-  const shortage = useMemo(() => {
-    if (!showInventory || !quantity || !availability) return null;
-    const q = Number(quantity);
-    return q > availability.totalAvailable ? q - availability.totalAvailable : 0;
-  }, [showInventory, quantity, availability]);
 
   const setDetail = (k: string) => (v: string) => setDetails((d) => ({ ...d, [k]: v }));
 
@@ -268,27 +252,6 @@ export function CreateTicketPage() {
             <FormInput label="Contact person name" value={details.contactName ?? ''} onChange={(e) => setDetail('contactName')(e.target.value)} />
             <FormInput label="Contact number" type="tel" value={details.contactNumber ?? ''} onChange={(e) => setDetail('contactNumber')(e.target.value)} />
           </div>
-
-          {showInventory && availability ? (
-            <div className="fg-tk-avail">
-              <div className="fg-tk-avail__head">
-                <strong>Available depot stock in your access scope</strong>
-                <StatusBadge tone={availability.totalAvailable > 0 ? 'success' : 'danger'}>
-                  {availability.totalAvailable} available
-                </StatusBadge>
-                {shortage && shortage > 0 ? <StatusBadge tone="warning">Shortage: {shortage}</StatusBadge> : null}
-              </div>
-              <div className="fg-tk-avail__depots">
-                {availability.byDepot.length === 0 ? (
-                  <span className="fg-tk-avail__none">No available depot stock is visible in your access scope. Vehicles held by vendors are not available depot stock. You can still submit the request for operations review.</span>
-                ) : (
-                  availability.byDepot.map((d) => (
-                    <span key={d.depotName} className="fg-tk-avail__chip">{d.depotName}: {d.count}</span>
-                  ))
-                )}
-              </div>
-            </div>
-          ) : null}
 
           {needsMedia ? (
             <div className="fg-tk-media">
