@@ -11,6 +11,7 @@ import { ApiResponse } from "../../utils/ApiResponse";
 import { ApiError } from "../../utils/ApiError";
 import { inspectionsService as service } from "./inspections.service";
 import { renderPodHtml } from "./pod.html";
+import { inspectionCreationChoices } from './inspection-creation.lookups';
 import * as v from "./inspections.validators";
 
 const ids = z.object({ id: z.string().uuid() });
@@ -46,6 +47,7 @@ inspectionsRoutes.get(
   read,
   asyncHandler(async (req, res) => out(res, await service.lookups(req.user!))),
 );
+inspectionsRoutes.get('/creation-choices', anyPermission('inspections:manage','inspections:confirm'), asyncHandler(async(req,res)=>out(res,await inspectionCreationChoices(req.user!))));
 inspectionsRoutes.get(
   "/dashboard",
   read,

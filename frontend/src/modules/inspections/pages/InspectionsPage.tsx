@@ -23,6 +23,7 @@ import type {
   Inspection,
   InspectionDashboard,
   InspectionLookups,
+  InspectionCreationChoices,
 } from "@/types/inspections";
 import {
   AuthedImage,
@@ -265,10 +266,13 @@ function InspectionList() {
 }
 
 function InspectionForm() {
+  const { hasPermission, user } = useAuth();
+  const canManage = hasPermission('inspections:manage');
   const navigate = useNavigate();
   const lookups = useLoad<InspectionLookups>("/inspections/lookups");
+  const choices = useLoad<InspectionCreationChoices>('/inspections/creation-choices');
   const [form, setForm] = useState({
-    type: "INITIAL_RECEIPT",
+    type: canManage ? "INITIAL_RECEIPT" : "RECEIVING",
     vehicleId: "",
     dispatchId: "",
     templateId: "",
@@ -287,8 +291,12 @@ function InspectionForm() {
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const templates = (lookups.data?.templates ?? []).filter((t) => t.type === form.type);
+  const dispatches = (choices.data?.dispatches ?? []).filter(d=>d.vehicleIds.includes(form.vehicleId));
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy || choices.loading || lookups.loading || choices.error || lookups.error) return;
+    if (!choices.data?.vehicles.some(v=>v.id===form.vehicleId)) { setError('Select a vehicle from the list.'); return; }
+    if (form.type==='RECEIVING' && !dispatches.some(d=>d.id===form.dispatchId)) {setError('Select the dispatch that brought this vehicle.');return;}
     setBusy(true);
     setError("");
     try {
@@ -309,10 +317,12 @@ function InspectionForm() {
       if (form.fuelLevel) body.fuelLevel = Number(form.fuelLevel);
       if (form.type === "RECEIVING" && form.receivingOutcome)
         body.receivingOutcome = form.receivingOutcome;
+      if (!canManage && user?.organizationId) body.organizationId=user.organizationId;
       const created = await api.mutate<Inspection>("/inspections", body);
       navigate(`/inspections/${created.id}`);
     } catch (e) {
-      setError(errText(e));
+      const details=(e as {details?:{field:string;message:string}[]}).details;
+      setError(Array.isArray(details) ? details.map(issue=>`${issue.field}: ${issue.message}`).join('; ') : errText(e));
     } finally {
       setBusy(false);
     }
@@ -323,29 +333,33 @@ function InspectionForm() {
       subtitle="Initial CTS receipt, pre-dispatch, receiving or return. Receiving inspections must be linked to a dispatch."
     >
       <Feedback error={error} />
+      {choices.loading || lookups.loading ? <p role="status">Loading permitted inspection choices…</p> : null}
+      {choices.error || lookups.error ? <div role="alert">{choices.error || lookups.error} <Button type="button" onClick={()=>{void choices.load();void lookups.load();}}>Retry loading choices</Button></div> : null}
+      {!canManage ? <p>Your account can create receiving inspections for vehicles in your permitted scope. Select Receiving and the related dispatch.</p> : null}
+      <p>Create the inspection draft first. On the next page, use <strong>Add photograph</strong> to upload each required photo before submitting for review.</p>
       <form onSubmit={submit}>
         <div className="fg-insp__form">
           <Select
             label="Inspection type"
             required
             value={form.type}
-            options={INSPECTION_TYPES}
-            onChange={(e) => set("type", e.target.value)}
+            options={INSPECTION_TYPES.filter(t=>(choices.data?.allowedTypes??(canManage?INSPECTION_TYPES.map(t=>t.value):['RECEIVING'])).includes(t.value as never))}
+            onChange={(e) => setForm(f=>({...f,type:e.target.value,templateId:'',dispatchId:''}))}
           />
-          <FormInput
-            label="Vehicle ID"
+          <Select
+            label="Vehicle"
             required
             value={form.vehicleId}
-            onChange={(e) => set("vehicleId", e.target.value)}
-            placeholder="Existing vehicle UUID"
+            options={[{label:'Select a vehicle',value:''},...(choices.data?.vehicles??[]).map(v=>({label:`${v.vehicleCode} — ${v.registrationNumber}`,value:v.id}))]}
+            onChange={(e) => setForm(f=>({...f,vehicleId:e.target.value,dispatchId:''}))}
           />
           {(form.type === "PRE_DISPATCH" || form.type === "RECEIVING") && (
-            <FormInput
-              label={`Dispatch ID${form.type === "RECEIVING" ? " (required)" : ""}`}
+            <Select
+              label={`Dispatch${form.type === "RECEIVING" ? " (required)" : ""}`}
               required={form.type === "RECEIVING"}
               value={form.dispatchId}
-              onChange={(e) => set("dispatchId", e.target.value)}
-              placeholder="Dispatch UUID"
+              options={[{label:'Select a dispatch',value:''},...dispatches.map(d=>({label:d.reference,value:d.id}))]}
+              onChange={(e) => {const dispatch=dispatches.find(d=>d.id===e.target.value);setForm(f=>({...f,dispatchId:e.target.value,...(f.type==='RECEIVING'&&dispatch?{depotId:dispatch.destinationDepotId}:{})}));}}
             />
           )}
           <Select
@@ -387,7 +401,8 @@ function InspectionForm() {
             <>
               <Select
                 label="Receiving organization / vendor"
-                value={form.organizationId}
+                value={canManage ? form.organizationId : (user?.organizationId ?? '')}
+                disabled={!canManage}
                 options={[
                   { label: "—", value: "" },
                   ...(lookups.data?.organizations ?? []).map((o) => ({
@@ -443,7 +458,9 @@ function InspectionForm() {
             onChange={(e) => set("generalRemarks", e.target.value)}
           />
         </div>
-        <Button type="submit" loading={busy} disabled={!form.vehicleId}>
+        {choices.data && !choices.data.vehicles.length ? <p role="status">No vehicles are available in your inspection scope. Ask operations to check the vehicle's custody and your account access.</p> : null}
+        {form.vehicleId && form.type === 'RECEIVING' && !dispatches.length ? <p role="status">No matching dispatch is available for this vehicle. Ask operations to check its dispatch before creating a receiving inspection.</p> : null}
+        <Button type="submit" loading={busy} disabled={choices.loading || lookups.loading || Boolean(choices.error || lookups.error) || !form.vehicleId || (form.type === 'RECEIVING' && !form.dispatchId)}>
           Create inspection
         </Button>
       </form>

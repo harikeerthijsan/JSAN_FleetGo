@@ -3,6 +3,11 @@ export type InspectionType =
   | "PRE_DISPATCH"
   | "RECEIVING"
   | "RETURN";
+export interface InspectionCreationChoices {
+  vehicles: {id:string;vehicleCode:string;registrationNumber:string}[];
+  dispatches: {id:string;reference:string;destinationDepotId:string;vehicleIds:string[]}[];
+  allowedTypes: InspectionType[];
+}
 export type InspectionStatus =
   | "PENDING"
   | "IN_PROGRESS"
