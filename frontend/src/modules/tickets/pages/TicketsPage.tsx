@@ -1,4 +1,5 @@
 import {useAuth} from '@/context/AuthContext';
+import { RequirePermission } from '@/routes/guards';
 import { Link, Route, Routes } from 'react-router-dom';
 import { EmptyState } from '@/components';
 import { TicketTabs } from '../components/TicketTabs';
@@ -27,7 +28,7 @@ export function TicketsPage() {
         <Route index element={<TicketDashboardPage />} />
         <Route path="list" element={<TicketListPage scope="all" />} />
         <Route path="mine" element={<TicketListPage scope="mine" />} />
-        <Route path="new" element={<CreateTicketPage />} />
+        <Route path="new" element={<RequirePermission anyOf={['tickets:create']}><CreateTicketPage /></RequirePermission>} />
         <Route path="inbox" element={<ApprovalInboxPage />} />
         <Route path="workflows" element={configure?<WorkflowConfigPage />:<EmptyState title="Workflow configuration requires administrative access"/>} />
         <Route path="sla" element={<SlaDashboardPage />} />

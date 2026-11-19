@@ -13,11 +13,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { NormalizedApiError } from '@/services/apiClient';
 import { fleetService } from '@/services/fleetService';
-import { masterDataService } from '@/services/masterDataService';
-import { ticketService } from '@/services/ticketService';
-import { vendorApi } from '@/services/vendorService';
+import { ticketService, type TicketCreationLookups } from '@/services/ticketService';
 import type { MasterRecord, Vehicle } from '@/types/vehicle';
-import type { VendorListItem } from '@/types/vendor';
 import { TICKET_PRIORITIES, type TicketType } from '@/types/ticket';
 import { PRIORITY_META, TYPE_LABELS, typeLabel } from '../ticketMeta';
 import './CreateTicket.css';
@@ -89,25 +86,49 @@ export function CreateTicketPage() {
   const [depots, setDepots] = useState<MasterRecord[]>([]);
   const [models, setModels] = useState<MasterRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [vendors, setVendors] = useState<VendorListItem[]>([]);
+  const [vendors, setVendors] = useState<TicketCreationLookups['requestingOrganizations']>([]);
+  const [lookupLoading, setLookupLoading] = useState(true);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [vehicleLoading, setVehicleLoading] = useState(false);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
+  const [reloadChoices, setReloadChoices] = useState(0);
+  const config = TYPE_FIELDS[type];
+  const needsVehicle = config.fields.includes('vehicle');
 
   useEffect(() => {
-    masterDataService.list('depots', { pageSize: 200 }).then((r) => setDepots(r.data)).catch(() => undefined);
-    masterDataService.list('models', { pageSize: 200, active: 'true' }).then((r) => setModels(r.data)).catch(() => undefined);
-    if (canChooseVendor) vendorApi.list({}, 1, 200).then((r) => setVendors(r.data)).catch(() => undefined);
-  }, [canChooseVendor]);
+    let active = true;
+    setLookupLoading(true); setLookupError(null);
+    ticketService.creationLookups().then(data => {
+      if (!active) return;
+      setDepots(data.depots); setModels(data.models); setVendors(data.requestingOrganizations);
+    }).catch(e => { if (active) setLookupError((e as NormalizedApiError).message ?? 'Could not load ticket choices.'); })
+      .finally(() => { if (active) setLookupLoading(false); });
+    return () => { active = false; };
+  }, [reloadChoices]);
 
   // Vehicle options: an admin/ops picking a vendor sees only that vendor's
   // vehicles; a vendor user is already scoped server-side to their own custody.
   useEffect(() => {
+    let active = true;
+    setVehicleId(''); setVehicles([]); setVehicleError(null);
+    if (!needsVehicle) { setVehicleLoading(false); return; }
     const vendorId = canChooseVendor && requestingOrgId ? requestingOrgId : undefined;
-    fleetService
-      .list({ pageSize: 200, ...(vendorId ? { vendorId } : {}) })
-      .then((r) => setVehicles(r.data))
-      .catch(() => undefined);
-  }, [canChooseVendor, requestingOrgId]);
+    setVehicleLoading(true);
+    (async () => {
+      const all: Vehicle[] = [];
+      let page = 1;
+      while (active) {
+        const result = await fleetService.list({page,pageSize:200,...(vendorId ? {vendorId} : {})});
+        all.push(...result.data);
+        if (page >= (result.meta?.totalPages ?? 1)) break;
+        page++;
+      }
+      if (active) setVehicles(all);
+    })().catch(e => { if (active) setVehicleError((e as NormalizedApiError).message ?? 'Could not load permitted vehicles.'); })
+      .finally(() => { if (active) setVehicleLoading(false); });
+    return () => { active = false; };
+  }, [canChooseVendor, requestingOrgId, needsVehicle, reloadChoices]);
 
-  const config = TYPE_FIELDS[type];
   const showInventory = type === 'DELIVERY' || type === 'NEW_VEHICLE';
   // Damage, replacement and maintenance requests support photo/video evidence.
   const needsMedia = type === 'DAMAGE_INCIDENT' || type === 'REPLACEMENT' || type === 'MAINTENANCE';
@@ -129,6 +150,7 @@ export function CreateTicketPage() {
 
   const onSubmit = async (e: FormEvent, submitNow: boolean) => {
     e.preventDefault();
+    if (saving || lookupLoading || lookupError || (needsVehicle && (vehicleLoading || vehicleError))) return;
     setError(null);
     if (!subject.trim()) { setError('Subject is required'); return; }
     // Required-field validation driven by ticket type.
@@ -182,6 +204,9 @@ export function CreateTicketPage() {
         breadcrumbs={[{ label: 'FleetGo', to: '/dashboard' }, { label: 'Tickets', to: '/tickets' }, { label: 'Create' }]}
       />
       <form onSubmit={(e) => onSubmit(e, true)}>
+        {lookupLoading ? <p role="status">Loading ticket choices…</p> : null}
+        {vehicleLoading ? <p role="status">Loading your permitted vehicles…</p> : null}
+        {lookupError || vehicleError ? <div role="alert" className="fg-auth__error">{lookupError ?? vehicleError} <Button type="button" onClick={() => setReloadChoices(value=>value+1)}>Retry loading choices</Button></div> : null}
         {error ? <div className="fg-auth__error" style={{ marginBottom: 'var(--space-4)' }}>{error}</div> : null}
 
         <Card title="Request">
@@ -209,13 +234,14 @@ export function CreateTicketPage() {
           <div className="fg-tk-form-grid">
             {config.fields.includes('model') ? (
               <Select label="Vehicle model" value={modelId} onChange={(e) => setModelId(e.target.value)}
-                options={[{ label: '— Select model —', value: '' }, ...models.map((m) => ({ label: m.name, value: m.id }))]} />
+                disabled={lookupLoading || !!lookupError}
+                options={[{ label: '— Select model —', value: '' }, ...models.map((m) => ({ label: `${m.make?.name ? `${m.make.name} — ` : ''}${m.name}${m.variant ? ` (${m.variant})` : ''}`, value: m.id }))]} />
             ) : null}
             {config.fields.includes('quantity') ? (
               <FormInput label="Quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
             ) : null}
             {config.fields.includes('vehicle') ? (
-              <Select label="Vehicle" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} required
+              <Select label="Vehicle" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} required disabled={vehicleLoading || !!vehicleError}
                 options={[{ label: 'Select a vehicle', value: '' }, ...vehicles.map((v) => ({ label: `${v.vehicleCode} — ${v.registrationNumber}`, value: v.id }))]} />
             ) : null}
             {config.fields.includes('sourceDepot') ? (
@@ -246,7 +272,7 @@ export function CreateTicketPage() {
           {showInventory && availability ? (
             <div className="fg-tk-avail">
               <div className="fg-tk-avail__head">
-                <strong>Inventory availability</strong>
+                <strong>Available depot stock in your access scope</strong>
                 <StatusBadge tone={availability.totalAvailable > 0 ? 'success' : 'danger'}>
                   {availability.totalAvailable} available
                 </StatusBadge>
@@ -254,7 +280,7 @@ export function CreateTicketPage() {
               </div>
               <div className="fg-tk-avail__depots">
                 {availability.byDepot.length === 0 ? (
-                  <span className="fg-tk-avail__none">No available vehicles match. The ticket can still be raised and handled as an exception.</span>
+                  <span className="fg-tk-avail__none">No available depot stock is visible in your access scope. Vehicles held by vendors are not available depot stock. You can still submit the request for operations review.</span>
                 ) : (
                   availability.byDepot.map((d) => (
                     <span key={d.depotName} className="fg-tk-avail__chip">{d.depotName}: {d.count}</span>
@@ -285,8 +311,8 @@ export function CreateTicketPage() {
 
         <div className="fg-tk-form-actions">
           <Button variant="secondary" type="button" onClick={() => navigate('/tickets')} disabled={saving}>Cancel</Button>
-          <Button variant="secondary" type="button" loading={saving} onClick={(e) => onSubmit(e as never, false)}>Save as draft</Button>
-          <Button type="submit" loading={saving}>Create &amp; submit</Button>
+          <Button variant="secondary" type="button" loading={saving} disabled={lookupLoading || !!lookupError || (needsVehicle && (vehicleLoading || !!vehicleError))} onClick={(e) => onSubmit(e as never, false)}>Save as draft</Button>
+          <Button type="submit" loading={saving} disabled={lookupLoading || !!lookupError || (needsVehicle && (vehicleLoading || !!vehicleError))}>Create &amp; submit</Button>
         </div>
       </form>
     </div>

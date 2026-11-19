@@ -7,6 +7,9 @@ import {
   validate,
 } from '../../middlewares';
 import { ticketsController } from './tickets.controller';
+import { ticketCreationLookups } from './tickets.lookups';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { ApiResponse } from '../../utils/ApiResponse';
 import {
   assignSchema,
   availabilityQuerySchema,
@@ -32,6 +35,10 @@ router.use(authenticate);
 const read = authorize('tickets:read');
 const manage = authorize('tickets:manage');
 const approve = authorize('tickets:approve');
+
+router.get('/creation-lookups', authorize('tickets:create'), asyncHandler(async (req, res) => {
+  ApiResponse.success(res, await ticketCreationLookups(req.user!), 'Ticket form choices');
+}));
 
 // Dashboard / reports / notifications / availability
 router.get('/dashboard', read, ticketsController.dashboard);

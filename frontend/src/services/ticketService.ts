@@ -28,6 +28,12 @@ export interface ListTicketsParams {
   sortDir?: 'asc' | 'desc';
 }
 
+export interface TicketCreationLookups {
+  models: { id: string; name: string; variant: string | null; make: { id: string; name: string } }[];
+  depots: { id: string; name: string }[];
+  requestingOrganizations: { id: string; name: string }[];
+}
+
 export interface CreateTicketPayload {
   type: TicketType;
   subject: string;
@@ -44,6 +50,10 @@ export interface CreateTicketPayload {
 }
 
 export const ticketService = {
+  async creationLookups(): Promise<TicketCreationLookups> {
+    const res = await apiClient.get<ApiSuccess<TicketCreationLookups>>('/tickets/creation-lookups');
+    return res.data.data;
+  },
   async dashboard(): Promise<TicketDashboard> {
     const res = await apiClient.get<ApiSuccess<TicketDashboard>>('/tickets/dashboard');
     return res.data.data;
