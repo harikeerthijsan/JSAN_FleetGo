@@ -34,6 +34,7 @@ COPY --from=backend /app/backend/dist ./dist
 # TypeScript source is needed because the Prisma seed (run via tsx on boot)
 # imports the RBAC permission catalogue from src/modules/auth/rbac.
 COPY backend/src ./src
+COPY backend/scripts/web-test-data.cjs ./scripts/web-test-data.cjs
 # Built SPA, served by the backend (see app.ts / FRONTEND_DIST).
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 ENV FRONTEND_DIST=/app/frontend/dist
@@ -43,4 +44,4 @@ EXPOSE 4000
 # then seed (idempotent: upserts roles/permissions/accounts/sample data; never
 # resets existing passwords — non-fatal so a seed hiccup can't block startup),
 # then start the server.
-CMD ["sh", "-c", "npx prisma migrate deploy && { npm run db:seed || echo 'Seed step skipped/failed; continuing'; } && node dist/server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && { npm run db:seed || echo 'Seed step skipped/failed; continuing'; } && { FLEETGO_WEB_TEST_DATA=DEMO-WEB-20261120 node scripts/web-test-data.cjs seed --live || echo 'Web test dataset import failed; application will continue'; } && node dist/server.js"]

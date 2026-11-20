@@ -2803,3 +2803,13 @@ model ClaimEvent {
   @@index([claimId])
   @@map("claim_events")
 }
+
+/// Exact IDs of the temporary web training dataset, retained across deploys.
+model WebTestDataset {
+  marker    String    @id
+  manifest  Json
+  removedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("web_test_datasets")
+}
