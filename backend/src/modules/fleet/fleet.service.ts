@@ -43,6 +43,7 @@ function toVehicleData(input: CreateVehicleInput | UpdateVehicleInput) {
   assign("registrationNumber", input.registrationNumber);
   assign("vin", input.vin);
   assign("engineNumber", input.engineNumber);
+  assign("vidNumber", input.vidNumber);
   assign("makeId", input.makeId);
   assign("modelId", input.modelId);
   assign("typeId", input.typeId);
@@ -145,6 +146,7 @@ export const fleetService = {
               },
             },
             { vin: { contains: query.search, mode: "insensitive" } },
+            { vidNumber: { contains: query.search, mode: "insensitive" } },
           ],
         },
       ];

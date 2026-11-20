@@ -485,6 +485,7 @@ model Vehicle {
   // Chassis/VIN — optional, but unique when present.
   vin                String? @unique
   engineNumber       String?
+  vidNumber          String?
 
   // Master-data references (all optional — do not force unavailable data).
   makeId          String?

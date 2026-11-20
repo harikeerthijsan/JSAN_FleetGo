@@ -38,6 +38,7 @@ export const IMPORT_COLUMNS = [
   "modelId",
   "typeId",
   "engineNumber",
+  "vidNumber",
   "categoryId",
   "fuelTypeId",
   "ownershipTypeId",
@@ -145,6 +146,7 @@ export async function template() {
   s.columns = IMPORT_COLUMNS.map((key) => ({ header: key, key, width: 24 }));
   s.addRow({
     registrationNumber: "SYNTHETIC-001",
+    vidNumber: "DEMO-VID-001",
     receivedAt: new Date().toISOString(),
     custodianType: "DEPOT",
     initialCondition: "GOOD",

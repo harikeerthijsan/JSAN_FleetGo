@@ -45,6 +45,7 @@ export const createVehicleSchema = z.object({
     .or(z.literal(''))
     .transform((v) => (v ? v.toUpperCase() : undefined)),
   engineNumber: optionalString,
+  vidNumber: z.string().trim().max(80, 'VID number must be 80 characters or fewer').nullable().optional().transform(v => v === '' ? null : v),
   makeId: optionalString,
   modelId: optionalString,
   typeId: optionalString,

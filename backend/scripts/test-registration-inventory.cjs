@@ -30,6 +30,7 @@ async function main() {
   try {
     for (const scenario of [{ condition: 'GOOD', custody: 'DEPOT', status: 'AVAILABLE' }, { condition: 'GOOD', custody: 'VENDOR', status: 'AT_VENDOR' }, { condition: 'DAMAGED', custody: 'DEPOT', status: 'DAMAGED' }, { condition: 'MAINTENANCE', custody: 'DEPOT', status: 'UNDER_MAINTENANCE' }]) {
       const body = input(); registrations.push(body.registrationNumber);
+      body.vidNumber = 'DEMO-VID-001';
       body.receiving.initialCondition = scenario.condition; body.receiving.custodianType = scenario.custody; body.receiving.custodianId = scenario.custody === 'VENDOR' ? vendor.id : depot.id;
       inspect = async (tx, vehicle) => {
         assert.equal(vehicle.status, scenario.status); checks++;
@@ -39,6 +40,11 @@ async function main() {
         assert.equal(await tx.vehicleMovement.count({ where: { vehicleId: vehicle.id, type: 'RECEIPT' } }), 1); checks++;
         assert.equal(await tx.vehicleCustody.count({ where: { vehicleId: vehicle.id, toDate: null } }), 1); checks++;
         assert.equal(vehicle.insurancePolicyNumber, 'TEST-POLICY'); checks++;
+        assert.equal(vehicle.vidNumber, 'DEMO-VID-001'); checks++;
+        const updated = await tx.vehicle.update({where:{id:vehicle.id},data:updateVehicleSchema.parse({vidNumber:' UPDATED-VID-002 '})});
+        assert.equal(updated.vidNumber, 'UPDATED-VID-002'); checks++;
+        const cleared = await tx.vehicle.update({where:{id:vehicle.id},data:updateVehicleSchema.parse({vidNumber:''})});
+        assert.equal(cleared.vidNumber, null); checks++;
       };
       await assert.rejects(fleetService.create(createVehicleSchema.parse(body), actor), Rollback);
     }
@@ -53,6 +59,7 @@ async function main() {
     const missing = input(); delete missing.receiving;
     assert.equal(createVehicleSchema.safeParse(missing).success, false); checks++;
     assert.equal(updateVehicleSchema.safeParse({ remarks: 'Existing vehicle update' }).success, true); checks++;
+    assert.equal(updateVehicleSchema.safeParse({vidNumber:'X'.repeat(81)}).success,false); checks++;
     assert.equal(await prisma.vehicle.count({ where: { registrationNumber: { in: registrations } } }), 0); checks++;
     console.log(`PASS ${checks} assertions: registration + inventory + receipt/custody/movement history, condition-derived statuses, validation, permissions, depot scope and transaction rollback. No test records retained.`);
   } finally { prisma.$transaction = originalTransaction; await prisma.$disconnect(); }

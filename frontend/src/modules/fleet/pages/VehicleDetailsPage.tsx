@@ -200,6 +200,7 @@ export function VehicleDetailsPage() {
             <Field label="Registration number" value={vehicle.registrationNumber} />
             <Field label="VIN / Chassis" value={vehicle.vin} />
             <Field label="Engine number" value={vehicle.engineNumber} />
+            <Field label="VID number" value={vehicle.vidNumber} />
             <Field label="Make" value={vehicle.make?.name} />
             <Field label="Model" value={vehicle.model ? (vehicle.model.variant ? `${vehicle.model.name} (${vehicle.model.variant})` : vehicle.model.name) : null} />
             <Field label="Fuel type" value={vehicle.fuelType?.name} />

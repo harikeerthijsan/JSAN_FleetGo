@@ -526,7 +526,7 @@ function InventoryList() {
         <div className="fg-inventory__search">
           <FormInput
             label="Search"
-            placeholder="Vehicle ID, registration or VIN"
+            placeholder="Vehicle code, registration, VIN or VID"
             value={filters.search}
             onChange={(e) => change("search", e.target.value)}
           />
@@ -2067,6 +2067,7 @@ function BulkImport() {
     "modelId",
     "typeId",
     "engineNumber",
+    "vidNumber",
     "categoryId",
     "fuelTypeId",
     "ownershipTypeId",

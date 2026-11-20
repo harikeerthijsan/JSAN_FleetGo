@@ -22,6 +22,7 @@ export const receiptSchema = z.object({
   modelId: id.optional(),
   typeId: id.optional(),
   engineNumber: text.optional(),
+  vidNumber: z.string().trim().max(80).optional(),
   categoryId: id.optional(),
   fuelTypeId: id.optional(),
   ownershipTypeId: id.optional(),

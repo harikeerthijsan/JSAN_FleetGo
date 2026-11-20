@@ -25,7 +25,7 @@ import './VehicleForm.css';
 
 type FormState = Record<string, string>;
 const EMPTY: FormState = {
-  registrationNumber: '', vin: '', engineNumber: '', makeId: '', modelId: '',
+  registrationNumber: '', vin: '', engineNumber: '', vidNumber: '', makeId: '', modelId: '',
   typeId: '', categoryId: '', fuelTypeId: '', ownershipTypeId: '',
   manufacturingYear: '', color: '', country: '', organizationId: '', vendorId: '', depotId: '',
   insuranceProvider: '', insurancePolicyNumber: '', insuranceExpiry: '',
@@ -38,6 +38,7 @@ const EMPTY: FormState = {
 function buildPayload(form: FormState): Record<string, unknown> {
   const p: Record<string, unknown> = {
     registrationNumber: form.registrationNumber.trim(),
+    vidNumber: form.vidNumber.trim() || null,
   };
   const put = (k: string, v: string) => { if (v.trim()) p[k] = v.trim(); };
   (['vin', 'engineNumber', 'makeId', 'modelId', 'typeId', 'categoryId',
@@ -109,6 +110,7 @@ export function VehicleFormPage() {
         setForm({
           registrationNumber: v.registrationNumber, vin: v.vin ?? '',
           engineNumber: v.engineNumber ?? '', makeId: v.make?.id ?? '',
+          vidNumber: v.vidNumber ?? '',
           modelId: v.model?.id ?? '', typeId: v.type?.id ?? '',
           categoryId: v.category?.id ?? '', fuelTypeId: v.fuelType?.id ?? '',
           ownershipTypeId: v.ownershipType?.id ?? '',
@@ -225,6 +227,7 @@ export function VehicleFormPage() {
             <FormInput label="Registration number" name="registrationNumber" error={fieldErrors.registrationNumber} value={form.registrationNumber} onChange={(e) => set('registrationNumber')(e.target.value)} required />
             <FormInput label="VIN / Chassis number" name="vin" error={fieldErrors.vin} value={form.vin} onChange={(e) => set('vin')(e.target.value)} hint="11–17 chars, excludes I/O/Q" />
             <FormInput label="Engine number" name="engineNumber" error={fieldErrors.engineNumber} value={form.engineNumber} onChange={(e) => set('engineNumber')(e.target.value)} />
+            <FormInput label="VID number" name="vidNumber" maxLength={80} error={fieldErrors.vidNumber} value={form.vidNumber} onChange={(e) => set('vidNumber')(e.target.value)} />
             {isEdit ? null : <div className="fg-form-note">Vehicle ID is generated automatically (FG-VEH-######).</div>}
           </div>
         </Card>

@@ -32,6 +32,7 @@ export interface Vehicle {
   registrationNumber: string;
   vin: string | null;
   engineNumber: string | null;
+  vidNumber: string | null;
   make: Ref | null;
   model: (Ref & { variant: string | null }) | null;
   type: Ref | null;

@@ -499,6 +499,7 @@ export async function receiveTx(
         modelId: input.modelId,
         typeId: input.typeId,
         engineNumber: input.engineNumber,
+        vidNumber: input.vidNumber,
         categoryId: input.categoryId,
         fuelTypeId: input.fuelTypeId,
         ownershipTypeId: input.ownershipTypeId,
@@ -640,7 +641,7 @@ export const inventoryService = {
     if (query.search)
       clauses.push({
         vehicle: {
-          OR: ["vehicleCode", "registrationNumber", "vin"].map((field) => ({
+            OR: ["vehicleCode", "registrationNumber", "vin", "vidNumber"].map((field) => ({
             [field]: { contains: query.search, mode: "insensitive" },
           })),
         },
